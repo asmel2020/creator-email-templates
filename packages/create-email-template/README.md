@@ -29,6 +29,8 @@ export function EditorPage() {
 
 `<EmailBuilder />` renderiza el editor completo (palette + canvas + panel de propiedades). Todo lo demás es configuración opcional.
 
+> 📥 **¿Ya creaste una plantilla y quieres volver a editarla?** Ve a [Editar una plantilla existente](#editar-una-plantilla-existente-cargar-del-backend) — se carga con `hydrate()` y el autoguardado sigue guardando sobre esa misma plantilla.
+
 ---
 
 ## `<EmailBuilderProvider>` — configuración completa
@@ -196,27 +198,76 @@ function Toolbar() {
 
 ---
 
-## Cargar una plantilla del backend (`hydrate`)
+## Editar una plantilla existente (cargar del backend)
 
-El flujo normal: la plantilla vive en tu BD, la traes y la inyectas. `hydrate` **normaliza el payload** (props faltantes se completan con defaults, tipos desconocidos se descartan — plantillas de versiones anteriores del esquema cargan sin romperse), reinicia el historial de deshacer y deja `dirty: false` (el autoguardado no dispara hasta que el usuario edite):
+¿Ya creaste una plantilla y quieres volver a editarla? El ciclo completo es: **fetch del JSON → `hydrate()` → el usuario edita → el autoguardado guarda sobre la misma plantilla**. Ejemplo de página completa:
 
 ```tsx
-import { useEffect } from "react";
-import { useEmailBuilderStoreInstance } from "create-email-template";
+import { useEffect, useState } from "react";
+import {
+  EmailBuilder,
+  EmailBuilderProvider,
+  useEmailBuilderStoreInstance,
+  type AutosavePayload,
+} from "create-email-template";
+import "create-email-template/style.css";
 
-function Editor({ template }: { template: { payload: { content: []; settings?: {} } } }) {
+// 1. Página: trae la plantilla y no monta el editor hasta que llegue
+export function EditorPage({ templateId }: { templateId: string }) {
+  const [payload, setPayload] = useState<AutosavePayload | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/templates/${templateId}`)
+      .then((r) => r.json())
+      .then((template) => setPayload(template.payload)); // { content, settings }
+  }, [templateId]);
+
+  if (!payload) return <p>Cargando plantilla…</p>;
+
+  return (
+    <EmailBuilderProvider
+      config={miConfig}
+      autosave={{
+        // 4. El autoguardado ahora actualiza ESA MISMA plantilla
+        onSave: (data) =>
+          fetch(`/api/templates/${templateId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          }),
+      }}
+    >
+      {/* 2. Componente puente: inyecta el payload en el store */}
+      <TemplateLoader payload={payload} />
+      {/* 3. El editor arranca ya con los bloques de la plantilla */}
+      <EmailBuilder />
+    </EmailBuilderProvider>
+  );
+}
+
+// Debe vivir DENTRO del provider (usa el store del builder). No renderiza nada.
+function TemplateLoader({ payload }: { payload: AutosavePayload }) {
   const store = useEmailBuilderStoreInstance();
 
   useEffect(() => {
     store.getState().hydrate({
-      blocks: template.payload.content,
-      settings: template.payload.settings, // opcional
+      blocks: payload.content,
+      settings: payload.settings, // opcional
     });
-  }, [template, store]);
+  }, [payload, store]);
 
-  return <EmailBuilder />;
+  return null;
 }
 ```
+
+Qué hace `hydrate({ blocks, settings? })`:
+
+- **Normaliza el payload**: props faltantes se completan con los defaults actuales, tipos desconocidos se descartan — plantillas guardadas con versiones anteriores del esquema cargan sin romperse.
+- **Reinicia el historial de deshacer**: el estado cargado es la base nueva (el undo anterior se descarta).
+- Deja `dirty: false`: el autoguardado **no dispara** hasta que el usuario edite de verdad.
+- Los `id` de los bloques se conservan, así que el guardado actualiza en lugar de duplicar.
+
+> 💡 Cargar antes de montar el editor (el `if (!payload)` del ejemplo) no es obligatorio, pero evita que el usuario edite un canvas vacío y su trabajo se sobrescriba cuando llegue el fetch.
 
 ---
 
