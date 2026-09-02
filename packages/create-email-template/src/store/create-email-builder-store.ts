@@ -1,5 +1,5 @@
-import { createStore } from "zustand/vanilla"
-import { v4 as uuidv4 } from "uuid"
+import { createStore } from "./vanilla-store"
+import { newId } from "../core/id"
 import {
   createBlock,
   type EmailBlock,
@@ -97,7 +97,7 @@ export const createEmailBuilderStore = (config: ResolvedEmailBuilderConfig) =>
       if (index === -1) return
       const source = blocks[index]
       const copy: EmailBlock = {
-        id: uuidv4(),
+        id: newId(),
         type: source.type,
         props: JSON.parse(JSON.stringify(source.props)),
       }

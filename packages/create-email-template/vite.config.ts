@@ -6,15 +6,38 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "./src"),
-    },
+    alias: [
+      {
+        // El shim CJS de base-ui hace require("react"); lo sustituimos por un
+        // stub ESM basado en los hooks nativos de React 18+. El orden importa:
+        // los subpaths más largos primero (el alias reemplaza por prefijo).
+        find: "use-sync-external-store/shim/with-selector",
+        replacement: path.resolve(
+          import.meta.dirname,
+          "src/shims/use-sync-external-store.ts",
+        ),
+      },
+      {
+        find: "use-sync-external-store/shim",
+        replacement: path.resolve(
+          import.meta.dirname,
+          "src/shims/use-sync-external-store.ts",
+        ),
+      },
+      {
+        find: "use-sync-external-store",
+        replacement: path.resolve(
+          import.meta.dirname,
+          "src/shims/use-sync-external-store.ts",
+        ),
+      },
+      { find: "@", replacement: path.resolve(import.meta.dirname, "./src") },
+    ],
   },
   build: {
     lib: {
       entry: {
         index: path.resolve(import.meta.dirname, "src/index.ts"),
-        server: path.resolve(import.meta.dirname, "src/server.ts"),
       },
       formats: ["es"],
       fileName: (_format, entryName) => `${entryName}.js`,
@@ -26,14 +49,6 @@ export default defineConfig({
         // React completo (y subpaths) SIEMPRE externo: el consumidor aporta su copia.
         if (id === "react" || id.startsWith("react/")) return true;
         if (id === "react-dom" || id.startsWith("react-dom/")) return true;
-        // use-sync-external-store (CJS) hace require("react"); se externaliza para
-        // que el bundler del consumidor interopee el require sin el shim de rolldown.
-        if (
-          id === "use-sync-external-store" ||
-          id.startsWith("use-sync-external-store/")
-        ) {
-          return true;
-        }
         return false;
       },
     },

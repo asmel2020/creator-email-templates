@@ -1,0 +1,56 @@
+{
+  "name": "@repo/create-email-renderer",
+  "version": "0.1.0",
+  "description": "React-free email template renderer (JSON blocks -> email-safe HTML) for back-ends and edge runtimes",
+  "type": "module",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./variables": {
+      "types": "./dist/variables.d.ts",
+      "import": "./dist/variables.js"
+    },
+    "./richtext": {
+      "types": "./dist/richtext.d.ts",
+      "import": "./dist/richtext.js"
+    },
+    "./default-blocks": {
+      "types": "./dist/default-blocks.d.ts",
+      "import": "./dist/default-blocks.js"
+    },
+    "./html-render": {
+      "types": "./dist/html-render.d.ts",
+      "import": "./dist/html-render.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "sanitize-html": "^2.17.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/sanitize-html": "^2.13.0",
+    "typescript": "~6"
+  }
+}

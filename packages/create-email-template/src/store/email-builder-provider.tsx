@@ -1,7 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useMemo } from "react";
-import { useStore } from "zustand";
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 import type {
   EmailBuilderState,
   EmailBuilderStore,
@@ -66,5 +70,9 @@ export const useEmailBuilderStore = <T,>(
   selector: (state: EmailBuilderState) => T,
 ): T => {
   const store = useEmailBuilderStoreInstance();
-  return useStore(store, selector);
+  return useSyncExternalStore(
+    store.subscribe,
+    () => selector(store.getState()),
+    () => selector(store.getInitialState()),
+  );
 };

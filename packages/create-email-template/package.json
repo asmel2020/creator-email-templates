@@ -1,7 +1,7 @@
 {
   "name": "@repo/create-email-template",
   "version": "0.1.1",
-  "description": "Reusable email template builder (blocks, canvas, options) with Zustand, RHF + zod and shadcn/ui",
+  "description": "Reusable email template builder (blocks, canvas, options) with a zero-dependency React store and shadcn/ui",
   "type": "module",
   "private": true,
   "main": "./dist/index.js",
@@ -12,10 +12,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./server": {
-      "types": "./dist/server.d.ts",
-      "import": "./dist/server.js"
     },
     "./style.css": "./dist/style.css"
   },
@@ -36,20 +32,16 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@react-email/components": "^0.3.1",
     "@react-email/render": "^1.1.4",
+    "@repo/create-email-renderer": "workspace:*",
     "clsx": "^2.1.1",
     "lucide-react": "^1.34.0",
-    "react-hot-toast": "^2.5.1",
-    "sanitize-html": "^2.17.6",
-    "uuid": "^10.0.0",
-    "zustand": "^5.0.14"
+    "react-hot-toast": "^2.5.1"
   },
   "devDependencies": {
     "@fontsource-variable/geist": "^5.3.0",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/sanitize-html": "^2.13.0",
-    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6",
     "eslint": "^10",
     "eslint-plugin-react-hooks": "^7.1.1",
