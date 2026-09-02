@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "template-app",
+  "account_id": "<YOUR_ACCOUNT_ID>",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "R2_ACCOUNT_ID": "<YOUR_R2_ACCOUNT_ID>"
+  },
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "template-bucket"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "template-db",
+      "database_id": "<YOUR_DATABASE_ID>",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}
