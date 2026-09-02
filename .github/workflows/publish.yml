@@ -50,7 +50,7 @@ jobs:
             CHANGED=$(git diff --name-only "${PREV_TAG}..${GITHUB_SHA}")
           else
             # Primer tag publicado: sin referencia previa, se publican ambos
-            CHANGED="packages/create-email-renderer packages/create-email-template"
+            CHANGED="packages/create-email-renderer/ packages/create-email-template/"
           fi
           RENDERER=no
           TEMPLATE=no
