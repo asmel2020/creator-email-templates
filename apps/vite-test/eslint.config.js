@@ -19,4 +19,17 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Scaffold shadcn/base-ui y rutas de TanStack: exportan constantes junto a
+    // componentes (buttonVariants, use-sidebar, Route…) por diseño. El HMR
+    // limitado de react-refresh es un trade-off aceptado ahí.
+    files: [
+      'src/components/ui/**',
+      'src/hooks/**',
+      'src/routes/**',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

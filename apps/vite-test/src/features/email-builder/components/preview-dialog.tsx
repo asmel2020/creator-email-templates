@@ -31,6 +31,7 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
 
   const [reactHtml, setReactHtml] = useState<string | null>(null)
   const [serverHtml, setServerHtml] = useState<string | null>(null)
+  // El dialog se monta solo cuando se abre (orquestador): arranca pendiente.
   const [isPending, setIsPending] = useState(true)
 
   useEffect(() => {
@@ -39,7 +40,6 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
     const subject = "Vista previa del correo"
     const context = { ...SAMPLE_CONTEXT, ...config.sampleContext }
 
-    setIsPending(true)
     Promise.all([
       renderHtml({ subject, context }),
       renderServerEmailHtml({

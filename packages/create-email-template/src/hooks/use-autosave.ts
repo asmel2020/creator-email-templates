@@ -26,9 +26,15 @@ export const useAutosaveEffect = <TData,>(
   const [lastResult, setLastResult] = useState<TData | null>(null);
 
   // Refs para que el interval no se reinicie en cada render del consumidor.
+  // La asignación va en un efecto: react-hooks/refs prohíbe escribir refs
+  // durante el render. El interval (declarado después) arranca con el valor
+  // vigente porque los efectos corren en orden de declaración.
   const inFlightRef = useRef(false);
   const optionsRef = useRef({ onSave, onSaved, enabled });
-  optionsRef.current = { onSave, onSaved, enabled };
+
+  useEffect(() => {
+    optionsRef.current = { onSave, onSaved, enabled };
+  });
 
   const runSave = useCallback(async () => {
     if (inFlightRef.current || !optionsRef.current.enabled) return;

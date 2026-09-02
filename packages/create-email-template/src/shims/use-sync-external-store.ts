@@ -1,3 +1,8 @@
+/* eslint-disable react-hooks/immutability -- Este archivo replica el patrón de
+   memoización del paquete oficial `use-sync-external-store/with-selector` de
+   React (cierre con variables mutadas dentro de useMemo). La regla del compiler
+   lo marca, pero es la implementación de referencia y su semántica es la
+   esperada por los consumidores (aquí: @base-ui/utils). */
 // @base-ui/react depende del paquete CJS "use-sync-external-store", que
 // internamente hace require("react") y rompe el bundle ESM de la librería en
 // dev (Vite). Este stub lo reemplaza usando primitivas nativas de React 18+:

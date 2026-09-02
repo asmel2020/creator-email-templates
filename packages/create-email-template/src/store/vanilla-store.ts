@@ -19,7 +19,6 @@ export const createStore = <TState>(
   ) => TState,
 ): VanillaStore<TState> => {
   let state: TState
-  let initialState: TState
   const listeners = new Set<(state: TState, previousState: TState) => void>()
 
   const setState: VanillaStore<TState>["setState"] = (partial) => {
@@ -43,7 +42,8 @@ export const createStore = <TState>(
     }
   }
 
-  initialState = state = initializer(setState, getState)
+  const initialState = initializer(setState, getState)
+  state = initialState
 
   return {
     setState,
