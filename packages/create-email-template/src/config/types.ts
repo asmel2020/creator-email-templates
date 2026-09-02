@@ -1,5 +1,6 @@
 import type {
   BlockDefinition,
+  EmailBlock,
   EmailBlockProps,
   EmailBlockType,
   EmailContext,
@@ -161,4 +162,39 @@ export interface ResolvedEmailBuilderConfig {
   sampleContext: EmailContext;
   uploadImage?: UploadImage;
   labels: EmailBuilderLabels;
+}
+
+/** Payload persistible del builder (lo que se guarda en la BD). */
+export interface AutosavePayload {
+  content: EmailBlock[];
+  settings: EmailSettings;
+}
+
+export interface AutosaveSuccess<TData = unknown> {
+  ok: true;
+  /** Lo que devolvió tu `onSave` (ej. `{ json, html }` del backend). */
+  data: TData;
+  payload: AutosavePayload;
+  savedAt: Date;
+}
+
+export interface AutosaveError {
+  ok: false;
+  error: unknown;
+  payload: AutosavePayload;
+}
+
+export interface AutosaveOptions<TData = unknown> {
+  /**
+   * Tu fetch al backend: recibe el payload y devuelve lo que tu API retorne
+   * (ej. `{ json, html }` renderizado con `@repo/create-email-renderer`).
+   * La librería no hace network por su cuenta.
+   */
+  onSave: (payload: AutosavePayload) => Promise<TData>;
+  /** Cada cuánto se intenta guardar si hay cambios. Default: `10_000` (10s). */
+  intervalMs?: number;
+  /** Interruptor rápido sin desmontar el provider. Default: `true`. */
+  enabled?: boolean;
+  /** Callback opcional tras cada intento (éxito o error), para toasts/feedback. */
+  onSaved?: (result: AutosaveSuccess<TData> | AutosaveError) => void;
 }

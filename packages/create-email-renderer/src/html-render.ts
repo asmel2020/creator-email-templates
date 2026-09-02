@@ -39,14 +39,38 @@ const alignMap = {
   right: "right",
 } as const;
 
+// Props CSS que aceptan números sin unidad (como los inline styles de React).
+const UNITLESS = new Set([
+  "font-weight",
+  "line-height",
+  "opacity",
+  "z-index",
+  "flex",
+  "flex-grow",
+  "flex-shrink",
+  "flex-basis",
+  "order",
+  "column-count",
+  "animation-iteration-count",
+  "orphans",
+  "widows",
+  "zoom",
+]);
+
 const styleToString = (
   style: Record<string, string | number | undefined>,
 ): string =>
   Object.entries(style)
     .filter(([, v]) => v !== undefined && v !== null && v !== "")
-    .map(
-      ([k, v]) => `${k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}:${v}`,
-    )
+    .map(([k, v]) => {
+      const prop = k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+      // Los números llevan px salvo las props unitless (igual que React).
+      const value =
+        typeof v === "number" && v !== 0 && !UNITLESS.has(prop)
+          ? `${v}px`
+          : String(v);
+      return `${prop}:${value}`;
+    })
     .join(";");
 
 const blockPadding = (props: EmailBlockProps) => {

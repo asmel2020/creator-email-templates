@@ -19,6 +19,7 @@ export * from "./store/email-builder-provider";
 // Hooks
 export * from "./hooks/use-email-builder";
 export * from "./hooks/use-render-email";
+export * from "./hooks/use-autosave";
 
 // UI
 export * from "./components/builder/email-builder";

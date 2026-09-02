@@ -12,11 +12,14 @@ import type {
 } from "./create-email-builder-store";
 import { createEmailBuilderStore } from "./create-email-builder-store";
 import type {
+  AutosaveOptions,
   EmailBuilderConfig,
   ResolvedEmailBuilderConfig,
   UploadImage,
 } from "../config/types";
 import { resolveEmailBuilderConfig } from "../config/defaults";
+import { useAutosaveEffect } from "../hooks/use-autosave";
+import { AutosaveStatusContext } from "./autosave-context";
 
 const EmailBuilderContext = createContext<EmailBuilderStore | null>(null);
 const EmailBuilderConfigContext =
@@ -25,10 +28,13 @@ const EmailBuilderConfigContext =
 export const EmailBuilderProvider = ({
   config,
   uploadImage,
+  autosave,
   children,
 }: {
   config?: EmailBuilderConfig;
   uploadImage?: UploadImage;
+  /** Opt-in: ciclo de autoguardado administrado (ver `AutosaveOptions`). */
+  autosave?: AutosaveOptions;
   children: React.ReactNode;
 }) => {
   const resolved = useMemo(() => {
@@ -37,10 +43,20 @@ export const EmailBuilderProvider = ({
   }, [config, uploadImage]);
   const store = useMemo(() => createEmailBuilderStore(resolved), [resolved]);
 
+  // Siempre se invoca el hook (reglas de hooks); sin `autosave` queda
+  // deshabilitado y `saveNow` es un no-op. Se le pasa el store directamente:
+  // el provider no puede consumir su propio contexto.
+  const autosaveStatus = useAutosaveEffect(
+    autosave ?? { onSave: async () => undefined, enabled: false },
+    store,
+  );
+
   return (
     <EmailBuilderConfigContext.Provider value={resolved}>
       <EmailBuilderContext.Provider value={store}>
-        {children}
+        <AutosaveStatusContext.Provider value={autosaveStatus}>
+          {children}
+        </AutosaveStatusContext.Provider>
       </EmailBuilderContext.Provider>
     </EmailBuilderConfigContext.Provider>
   );
