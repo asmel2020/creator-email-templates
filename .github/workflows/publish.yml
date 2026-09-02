@@ -76,7 +76,7 @@ jobs:
           if npm view "create-email-renderer@$VERSION" version > /dev/null 2>&1; then
             echo "create-email-renderer@$VERSION ya existe en npm — se omite"
           else
-            pnpm --filter create-email-renderer publish --access public
+            pnpm --filter create-email-renderer publish --access public --no-git-checks
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -89,7 +89,7 @@ jobs:
           if npm view "create-email-template@$VERSION" version > /dev/null 2>&1; then
             echo "create-email-template@$VERSION ya existe en npm — se omite"
           else
-            pnpm --filter create-email-template publish --access public
+            pnpm --filter create-email-template publish --access public --no-git-checks
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
