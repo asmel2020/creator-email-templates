@@ -150,6 +150,8 @@ export interface EmailBuilderConfig {
   defaultSettings?: Partial<EmailSettings>;
   sampleContext?: EmailContext;
   labels?: Partial<EmailBuilderLabels>;
+  /** Profundidad máxima del historial de deshacer. Default: 50. */
+  historyLimit?: number;
 }
 
 export interface ResolvedEmailBuilderConfig {
@@ -162,6 +164,7 @@ export interface ResolvedEmailBuilderConfig {
   sampleContext: EmailContext;
   uploadImage?: UploadImage;
   labels: EmailBuilderLabels;
+  historyLimit: number;
 }
 
 /** Payload persistible del builder (lo que se guarda en la BD). */
@@ -187,7 +190,7 @@ export interface AutosaveError {
 export interface AutosaveOptions<TData = unknown> {
   /**
    * Tu fetch al backend: recibe el payload y devuelve lo que tu API retorne
-   * (ej. `{ json, html }` renderizado con `@repo/create-email-renderer`).
+   * (ej. `{ json, html }` renderizado con `create-email-renderer`).
    * La librería no hace network por su cuenta.
    */
   onSave: (payload: AutosavePayload) => Promise<TData>;

@@ -56,7 +56,7 @@ export const SAMPLE_CONTEXT: EmailContext = {
   email: "juan@ejemplo.com",
   phone: "+57 300 111 2233",
   role: "Instructor",
-  companyName: "Sin Corbatas",
+  companyName: "Mi Empresa",
   unsubscribeUrl: "https://www.ejemplo.com/baja",
   link: "https://www.ejemplo.com/",
   date: "5 de septiembre de 2026",

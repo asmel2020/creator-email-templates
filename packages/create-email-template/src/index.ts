@@ -5,6 +5,7 @@ export * from "./core/types";
 export * from "./core/default-blocks";
 export * from "./core/variables";
 export * from "./core/richtext";
+export * from "./core/normalize";
 export * from "./core/blocks";
 export * from "./core/render";
 

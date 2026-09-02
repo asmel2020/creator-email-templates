@@ -2,8 +2,8 @@ import type {
   AutosavePayload,
   EmailBuilderConfig,
   UploadImage,
-} from "@repo/create-email-template"
-import { renderTemplateEmail } from "@repo/create-email-renderer"
+} from "create-email-template"
+import { renderTemplateEmail } from "create-email-renderer"
 
 /**
  * Subida de imágenes de demostración: devuelve una URL blob local temporal.
@@ -20,7 +20,7 @@ export const uploadImageDemo: UploadImage = async (file) => {
 // Logo de marca por defecto para el bloque Header (data URI SVG para que
 // funcione sin internet). En producción: "https://mi-cdn.com/logo.png".
 const LOGO_MARCA =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40'%3E%3Crect width='140' height='40' rx='6' fill='%230d0b08'/%3E%3Ctext x='70' y='26' font-family='Arial' font-size='13' font-weight='bold' fill='%23d7b227' text-anchor='middle'%3ESIN CORBATAS%3C/text%3E%3C/svg%3E"
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40'%3E%3Crect width='140' height='40' rx='6' fill='%230d0b08'/%3E%3Ctext x='70' y='26' font-family='Arial' font-size='13' font-weight='bold' fill='%23d7b227' text-anchor='middle'%3EMI MARCA%3C/text%3E%3C/svg%3E"
 
 /**
  * Configuración de muestra del builder: muestra los parámetros disponibles de
@@ -31,7 +31,7 @@ export const SAMPLE_EMAIL_BUILDER_CONFIG: EmailBuilderConfig = {
   // Valores iniciales por tipo de bloque (se aplican al arrastrar el bloque)
   blockDefaults: {
     header: {
-      brandName: "Sin Corbatas",
+      brandName: "Mi Marca",
       tagline: "Aprende antes de invertir",
       logoUrl: LOGO_MARCA,
     },
@@ -56,7 +56,7 @@ export const SAMPLE_EMAIL_BUILDER_CONFIG: EmailBuilderConfig = {
     },
     footer: {
       text: "Recibes este correo por estar registrado en {companyName}. Date de baja en {unsubscribeUrl}",
-      brandName: "Sin Corbatas",
+      brandName: "Mi Marca",
     },
   },
 
@@ -81,13 +81,13 @@ export const SAMPLE_EMAIL_BUILDER_CONFIG: EmailBuilderConfig = {
     firstName: "Juan",
     lastName: "Pérez",
     email: "juan@ejemplo.com",
-    companyName: "Sin Corbatas",
+    companyName: "Mi Empresa",
     webinarName: "Aprende antes de invertir",
     webinarDate: "12 de octubre de 2026",
     webinarTime: "19:00",
-    registerUrl: "https://sincorbatas.com/registro",
-    unsubscribeUrl: "https://sincorbatas.com/baja",
-    supportEmail: "soporte@sincorbatas.com",
+    registerUrl: "https://mi-sitio.com/registro",
+    unsubscribeUrl: "https://mi-sitio.com/baja",
+    supportEmail: "soporte@mi-sitio.com",
   },
 
   // Etiquetas disponibles en el editor (subset de ejemplo; por defecto se
@@ -110,7 +110,7 @@ export interface SavedTemplate {
 
 /**
  * Autoguardado de demostración: simula el backend que recibirá el JSON.
- * Usa el renderer puro (@repo/create-email-renderer) para devolver
+ * Usa el renderer puro (create-email-renderer) para devolver
  * `{ json, html }` — el mismo contrato que tendrá tu endpoint real:
  *
  *   app.put("/templates/:id", async (c) => {

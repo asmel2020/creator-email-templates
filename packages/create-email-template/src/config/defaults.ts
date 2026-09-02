@@ -74,5 +74,6 @@ export const resolveEmailBuilderConfig = (
     defaultSettings: { ...DEFAULT_SETTINGS, ...config?.defaultSettings },
     sampleContext: config?.sampleContext ?? SAMPLE_CONTEXT,
     labels: { ...DEFAULT_LABELS, ...config?.labels },
+    historyLimit: config?.historyLimit ?? 50,
   };
 };

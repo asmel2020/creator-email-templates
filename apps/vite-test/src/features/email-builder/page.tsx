@@ -1,18 +1,17 @@
-import { EyeIcon } from "lucide-react"
-import { EmailBuilder, EmailBuilderProvider } from "@repo/create-email-template"
-import { Button } from "@/components/ui/button"
+import { EmailBuilder, EmailBuilderProvider } from "create-email-template"
 import {
   SAMPLE_EMAIL_BUILDER_CONFIG,
   onSaveDemo,
   uploadImageDemo,
 } from "./config"
-import { useEmailBuilderDialogsStore } from "./stores/use-email-builder-dialogs"
+import { EditorToolbar } from "./components/editor-toolbar"
 import { EmailBuilderDialogs } from "./components/dialogs"
-import { AutosaveIndicator } from "./components/autosave-indicator"
 
+/**
+ * Página de demostración: provider (config + uploadImage + autosave)
+ * + toolbar con los hooks del sistema + builder + dialogs.
+ */
 export default function EmailBuilderPage() {
-  const setOpen = useEmailBuilderDialogsStore((s) => s.setOpen)
-
   return (
     <EmailBuilderProvider
       config={SAMPLE_EMAIL_BUILDER_CONFIG}
@@ -26,23 +25,7 @@ export default function EmailBuilderPage() {
       }}
     >
       <div className="flex min-h-svh flex-col">
-        <header className="flex items-center justify-between gap-4 border-b px-4 py-2">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="font-heading text-base font-medium">
-                Email Builder
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Edita la plantilla y compara los renders desde la vista previa
-              </p>
-            </div>
-            <AutosaveIndicator />
-          </div>
-          <Button size="sm" onClick={() => setOpen("preview")}>
-            <EyeIcon data-slot="icon" />
-            Vista previa
-          </Button>
-        </header>
+        <EditorToolbar />
 
         <EmailBuilder />
 

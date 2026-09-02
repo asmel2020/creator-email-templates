@@ -1,332 +1,201 @@
-# creator-email — Monorepo de plantillas de email
+# @repo — Email Template Builder & Renderer
 
-Monorepo (Turborepo + pnpm) con dos paquetes para construir y renderizar plantillas de email por bloques:
+Monorepo con dos librerías para construir y renderizar plantillas de email por bloques:
 
-| Paquete | Nombre | Qué hace | React |
-|---|---|---|---|
-| `packages/create-email-template` | `@repo/create-email-template` | **Editor visual (front-end)**: builder drag & drop, palette, canvas editable, panel de propiedades, preview React (react-email). Exporta componentes, hooks y store. | **Sí** — peer `react`/`react-dom` |
-| `packages/create-email-renderer` | `@repo/create-email-renderer` | **Renderizado (back-end)**: convierte el JSON de bloques a HTML email-safe (tablas + estilos inline). Solo manipulación de strings. | **No** — cero React, corre en Node, Workers, edge |
+| Paquete | Para qué | React |
+|---|---|---|
+| **`create-email-template`** | Editor visual drag & drop: palette, canvas editable inline, panel de propiedades, autoguardado, deshacer, preview. | Sí (`^18 \|\| ^19`) |
+| **`create-email-renderer`** | Convertir el JSON de la plantilla a **HTML email-safe sin React**: tablas + estilos inline, listo para Node, Workers o edge. | **No** — cero dependencias React |
 
-El flujo completo es:
+**El flujo completo:**
 
 ```
-Editor (front)  ──getPayload()──▶  JSON { content, settings }  ──▶  Base de datos
-                                                                        │
-Email HTML  ◀──renderTemplateEmail({ payload, context })  ◀──────────────┘
-             (@repo/create-email-renderer, sin React)
+Editor (front) ──getPayload()──▶ JSON { content, settings } ──▶ tu base de datos
+                                                                      │
+Email HTML ◀── renderTemplateEmail({ payload, context }) ◀────────────┘
+              (create-email-renderer, sin React)
 ```
 
-Ambos paquetes comparten el mismo core (tipos, bloques por defecto, variables, richtext) desde `@repo/create-email-renderer`, por lo que **el preview del editor y el HTML del backend nunca divergen**.
+Ambas librerías comparten el mismo core, por lo que **el preview del editor y el HTML del backend nunca divergen**.
+
+> 📐 **Documentación técnica completa** (arquitectura, estructura, convenciones, gotchas, testing y checklist de publicación): ver [AGENTS.md](./AGENTS.md).
 
 ---
 
-## Requisitos
+## Características
 
-- **Node.js >= 18** · **pnpm 9** (el repo usa `packageManager: pnpm@9.0.0`)
-- **React mínimo permitido: `^18.0.0`** (también `^19.0.0`). Solo lo necesita `@repo/create-email-template` (usa `useSyncExternalStore`, nativo desde React 18). `@repo/create-email-renderer` no tiene React ni ninguna dependencia más allá de `sanitize-html`.
+- 🧱 **12 tipos de bloque**: header, hero, heading, text, list, button, image, quote, columns, divider, spacer, footer — todos con estilos email-safe (tablas + inline).
+- ✍️ **Edición inline enriquecida** (negrita, cursiva, enlaces) directamente en el canvas, con drag & drop (`@dnd-kit`).
+- 🏷️ **Variables** `{firstName}` con resolución en preview y en el HTML final.
+- 💾 **Autoguardado integrado** (opt-in, default cada 10s) con estado reactivo y guardado manual vía `saveNow()`.
+- ↩️ **Deshacer lineal** (sin redo) con agrupación de escritura, tope configurable y reinicio al cargar plantillas.
+- 🛡️ **Normalización de payloads**: plantillas guardadas con versiones anteriores del esquema se auto-reparan al cargarse o renderizarse.
+- 🎨 **Temas por configuración**: paleta, defaults por bloque, etiquetas de UI (i18n) y contexto de ejemplo.
+- ☁️ **Renderer portable**: JS puro — Node, Cloudflare Workers, Vercel Edge, Deno, Bun.
+
+---
 
 ## Instalación
 
-### Dentro de este monorepo (workspace pnpm)
-
-En el `package.json` de la app que lo consuma:
+Las librerías se consumen como workspaces de este monorepo (preparadas para publicarse a npm — ver checklist en [AGENTS.md](./AGENTS.md#10-publicación-npm-estado-y-procedimiento)):
 
 ```jsonc
+// package.json de tu app
 {
   "dependencies": {
-    // Solo front-end (builder + preview):
-    "@repo/create-email-template": "workspace:*",
-    // Solo back-end (render a HTML), o ambos si la app hace las dos cosas:
-    "@repo/create-email-renderer": "workspace:*"
+    "create-email-template": "workspace:*",  // solo front-end (editor)
+    "create-email-renderer": "workspace:*"   // solo back-end (render HTML)
   }
 }
 ```
 
 ```sh
-pnpm install          # enlaza los workspace
-pnpm build            # turbo compila renderer → template → apps (respeta dependencias)
+pnpm install
+pnpm build   # compila renderer → template → apps
 ```
 
-> Los paquetes son `private: true`: se consumen por workspace, no por npm publish. Si algún día se publican, bastaría cambiar `"workspace:*"` por la versión.
-
-### Estructura
-
-```
-apps/
-├── vite-test/            # app de ejemplo (TanStack Router) con el builder integrado
-├── template-back-end/    # API Hono + Cloudflare Workers (ya incluye el renderer)
-└── api/
-packages/
-├── create-email-template/   # UI del builder (React)
-└── create-email-renderer/   # core puro + render HTML (sin React)
-```
+Requisitos: Node ≥ 18, pnpm 9, React ≥ 18 (solo para el editor).
 
 ---
 
-## 1. Front-end: `@repo/create-email-template`
-
-### Setup mínimo
+## Quick start — Editor (front-end)
 
 ```tsx
-import {
-  EmailBuilder,
-  EmailBuilderProvider,
-} from "@repo/create-email-template";
-import "@repo/create-email-template/style.css"; // ¡necesario! estilos .ter-theme autocontenidos
+import { EmailBuilder, EmailBuilderProvider } from "create-email-template";
+import "create-email-template/style.css";
 
 export function EditorPage() {
   return (
-    <EmailBuilderProvider>
+    <EmailBuilderProvider
+      config={{
+        blockDefaults: {
+          header: { brandName: "Mi Marca", logoUrl: "https://mi-cdn.com/logo.png" },
+          button: { label: "Quiero mi cupo", href: "{registerUrl}" },
+        },
+        sampleContext: { firstName: "Danny", registerUrl: "https://mi-sitio.com/registro" },
+      }}
+      uploadImage={async (file) => subirAS3(file)}          // opcional
+      autosave={{                                            // opcional (default 10s)
+        onSave: async (payload) => {
+          const res = await fetch("/api/templates/1", {
+            method: "PUT",
+            body: JSON.stringify(payload),
+          });
+          return res.json(); // ej. { json, html } — disponible en useAutosaveStatus()
+        },
+      }}
+    >
       <EmailBuilder />
     </EmailBuilderProvider>
   );
 }
 ```
 
-`EmailBuilder` es el editor completo (palette + canvas + panel). Todo lo demás es opcional.
+### Hooks principales
 
-### `<EmailBuilderProvider>` — parámetros
+| Hook | Uso |
+|---|---|
+| `useAutosaveStatus()` | `{ isSaving, lastSavedAt, lastError, lastResult, saveNow }` — **`saveNow()` = tu botón "Guardar"** manual usando el mismo `onSave`. |
+| `useRenderEmail()` | `{ getPayload, renderHtml, getHtml, resolve }` — payload para persistir y preview. |
+| `useEmailBuilderStore(selector)` | Estado y acciones: `blocks`, `dirty`, `past.length > 0` (puede deshacer), `undo()`, `hydrate({ blocks, settings })` para cargar plantillas del backend. |
 
-```tsx
-<EmailBuilderProvider
-  config={{
-    /* Todas opcionales */
-    variables?: EmailVariable[];               // etiquetas {name} disponibles (default: DEFAULT_VARIABLES)
-    variableSections?: EmailVariableSection[]; // agrupación para el dialog "Etiquetas disponibles"
-    blockLibrary?: BlockDefinition[];          // bloques del palette (default: DEFAULT_BLOCK_LIBRARY)
-    blockDefaults?: BlockDefaultsMap;          // sobrescribe defaultProps por tipo de bloque
-    palette?: Partial<EmailPalette>;           // colores base: { INK, DARK, GOLD, CREAM_DIM }
-    defaultSettings?: Partial<EmailSettings>;  // { pageBackground, cardBorderWidth, cardBorderRadius }
-    sampleContext?: EmailContext;              // datos de ejemplo para el preview ({name: "Juan"...})
-    labels?: Partial<EmailBuilderLabels>;      // textos de la UI (i18n)
-  }}
-  uploadImage={async (file: File) => {
-    // Sube a R2/S3/tu API y devuelve la URL pública
-    const url = await miApi.upload(file);
-    return url;
-  }}
->
-  {children}
-</EmailBuilderProvider>
-```
-
-Ejemplo de `blockDefaults` y `labels`:
+### Guardar con botón + autoguardado
 
 ```tsx
-<EmailBuilderProvider
-  config={{
-    blockDefaults: {
-      text: { text: "Tu mensaje aquí. Usa {firstName}." },
-      button: { label: "Ver más", backgroundColor: "#d7b227" },
-    },
-    labels: { blocksTitle: "Blocks", optionsTitle: "Options" },
-    palette: { GOLD: "#c9a227" },
-    sampleContext: { firstName: "Danny", unsubscribeUrl: "https://mi-sitio.com/baja" },
-  }}
->
-```
-
-### Guardar la plantilla (el payload que entiende el backend)
-
-```tsx
-import { useRenderEmail } from "@repo/create-email-template";
-
 function Toolbar() {
-  const { getPayload } = useRenderEmail(); // debe estar dentro del <EmailBuilderProvider>
-
-  const save = async () => {
-    const payload = getPayload(); // { content: EmailBlock[], settings: EmailSettings }
-    await fetch("/api/templates", {
-      method: "POST",
-      body: JSON.stringify(payload), // esto es lo que se guarda en la BD
-    });
-  };
-  return <button onClick={save}>Guardar</button>;
+  const { saveNow, isSaving } = useAutosaveStatus();
+  return <button onClick={() => saveNow()} disabled={isSaving}>Guardar</button>;
 }
 ```
 
-El payload es JSON plano, sin funciones ni refs — seguro para persistir tal cual.
+Un solo `onSave` sirve para ambos: el ciclo automático y el botón manual.
 
-### Autoguardado (opt-in)
-
-El builder puede administrar el guardado periódico: cada `intervalMs` (default **10s**), si hay cambios (`dirty`) y no hay un guardado en vuelo, llama a tu `onSave` y marca el store como salvado. La librería **no hace network** — `onSave` es tu fetch; lo típico es que el backend persista el JSON y devuelva también el HTML renderizado:
+### Cargar una plantilla guardada
 
 ```tsx
-import {
-  EmailBuilder,
-  EmailBuilderProvider,
-  useAutosaveStatus,
-} from "@repo/create-email-template";
-import type { AutosavePayload } from "@repo/create-email-template";
-
-async function onSave(payload: AutosavePayload) {
-  const res = await fetch(`/api/templates/${templateId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error("Error al guardar");
-  return res.json() as Promise<{ json: AutosavePayload; html: string }>;
-}
-
-<EmailBuilderProvider
-  config={config}
-  autosave={{
-    onSave,                     // obligatorio: tu fetch al backend
-    intervalMs: 10_000,         // default 10s
-    enabled: true,              // default true (interruptor sin desmontar el provider)
-    onSaved: (result) => {      // opcional: toast/feedback
-      if (!result.ok) console.error("Autosave falló", result.error);
-      else console.log("Guardado:", result.data); // { json, html } del backend
-    },
-  }}
->
-  <MiIndicadorDeGuardado />
-  <EmailBuilder />
-</EmailBuilderProvider>
+const store = useEmailBuilderStoreInstance();
+const template = await fetch(`/api/templates/${id}`).then((r) => r.json());
+store.getState().hydrate({ blocks: template.payload.content, settings: template.payload.settings });
+// normaliza el payload, reinicia el historial de deshacer y deja dirty en false
 ```
 
-Estado del autoguardado desde cualquier componente dentro del provider:
+**Deshacer** está incluido: Ctrl/Cmd+Z ya funciona dentro de `<EmailBuilder />`, y `undo()` / `canUndo` están expuestos para tu propia UI.
 
-```tsx
-function MiIndicadorDeGuardado() {
-  const { isSaving, lastSavedAt, lastError, lastResult, saveNow } = useAutosaveStatus();
-  // lastResult = lo que devolvió tu onSave (ej. { json, html } del backend)
-  return <button onClick={() => saveNow()} disabled={isSaving}>Guardar ahora</button>;
-}
+---
+
+## Quick start — Renderer (back-end, sin React)
+
+```ts
+import { renderTemplateEmail } from "create-email-renderer";
+
+// template.payload = el JSON guardado desde el editor
+const { html, subject } = await renderTemplateEmail({
+  subject: "Hola {firstName}, tu webinar es el {webinarDate}",
+  payload: template.payload,
+  context: { firstName: user.firstName, webinarDate: "12 de octubre" },
+});
+
+await emailClient.send({ to: user.email, subject, html });
 ```
 
-Contrato del endpoint (backend con el renderer):
+- Funciona en **Node, Cloudflare Workers, Vercel Edge, Deno y Bun** (JS puro).
+- Las variables `{key}` se resuelven en el HTML **y en el subject**.
+- Payloads corruptos o de versiones anteriores del esquema se **normalizan automáticamente** (nunca lanza por datos sucios; lanza solo si el payload no tiene bloques).
+
+**Endpoint recomendado** (devuelve JSON + HTML; el front lo recibe en `useAutosaveStatus().lastResult`):
 
 ```ts
 app.put("/templates/:id", async (c) => {
-  const payload = await c.req.json(); // { content, settings }
+  const payload = await c.req.json();
   const { html, subject } = await renderTemplateEmail({
     subject: template.subject,
     payload,
     context: userContext,
   });
   await db.updateTemplate(c.req.param("id"), payload);
-  return c.json({ json: payload, html }); // ← lo recibe `lastResult`
+  return c.json({ json: payload, html });
 });
 ```
 
-Detalles del ciclo: si editas mientras se guarda, `dirty` vuelve a `true` y el próximo tick lo toma (no se pierden cambios); sin `autosave` el provider se comporta exactamente igual que antes.
+---
 
-### Hooks y store (uso avanzado)
+## API en una tabla
 
-| API | Descripción |
+| Necesito… | Uso |
 |---|---|
-| `useRenderEmail()` | `{ renderHtml, getHtml, getPayload, resolve, html, isPending }` — renderiza el preview con react-email y expone el payload actual. |
-| `useEmailBuilderStore((s) => s.blocks)` | Zustand-like: selecciona estado del builder (`blocks`, `selectedId`, `settings`, `dirty`, acciones `addBlock`, `reorder`, `updateBlockProps`, `removeBlock`, `duplicateBlock`, `select`, `hydrate`, `getPayload`...). Requiere el provider. |
-| `createEmailBuilderStore(config)` | Store vanilla (mismo shape, `getState`/`setState`/`subscribe`) para usar fuera de React. Cero dependencias. |
+| El editor completo | `<EmailBuilderProvider><EmailBuilder /></EmailBuilderProvider>` + `style.css` |
+| Configurar el editor | `config={{ blockDefaults, palette, defaultSettings, sampleContext, labels, variables, blockLibrary, historyLimit }}` |
+| Guardar (auto o botón) | `autosave={{ onSave, intervalMs?, enabled?, onSaved? }}` + `useAutosaveStatus().saveNow()` |
+| Cargar del backend | `useEmailBuilderStoreInstance().getState().hydrate({ blocks, settings? })` |
+| Deshacer | Ctrl/Cmd+Z (incluido) · `useEmailBuilderStore((s) => s.undo)` |
+| Renderizar a HTML | `renderTemplateEmail({ subject, payload, context })` |
+| Bloques crudos → HTML | `renderEmailHtml({ blocks, settings, palette })` |
+| Validar/normalizar JSON | `normalizeBlocks` / `normalizeSettings` / `parseTemplatePayload` |
 
-Componentes sueltos también exportados: `BlockPalette`, `Canvas`, `SortableCanvas`, `EditableBlockRenderer`, `PropertiesPanel`, `InlineTextEditor`, `SelectionToolbar`, `VariablesInfoDialog` — por si quieres armar un editor a medida.
-
----
-
-## 2. Back-end: `@repo/create-email-renderer` (sin React)
-
-Funciona en **Node, Cloudflare Workers, Vercel Edge, Deno, Bun** — es JS puro.
-
-### Renderizar una plantilla guardada
-
-```ts
-import { renderTemplateEmail, buildTemplateContext } from "@repo/create-email-renderer";
-
-// template.payload es el JSON guardado desde el editor: { content, settings }
-const { html, subject } = await renderTemplateEmail({
-  subject: "Hola {firstName}, tu webinar es el {webinarDate}",
-  payload: template.payload,          // string JSON u objeto; tolera null/undefined (devuelve vacío)
-  context: {
-    firstName: user.firstName,        // tus datos reales
-    webinarDate: "12 de octubre",
-    confirmEmailUrl: confirmUrl,
-  },
-  // settings?: Partial<EmailSettings>  — sobrescribe los settings guardados
-  // palette?: EmailPalette             — sobrescribe los colores
-});
-
-await emailClient.send({ to: user.email, subject, html });
-```
-
-- Las **variables `{key}`** se resuelven con `context` (merge sobre `SAMPLE_CONTEXT`, así los correos de prueba siempre se ven completos).
-- El **subject también resuelve variables** (`"Hola {firstName}"` → `"Hola Danny"`).
-- Si el payload no tiene bloques lanza `Error("Template payload has no blocks")`.
-
-### Ruta de ejemplo (Hono / Express)
-
-```ts
-import { Hono } from "hono";
-import { renderTemplateEmail } from "@repo/create-email-renderer";
-
-const app = new Hono();
-
-app.post("/emails/:templateId/preview", async (c) => {
-  const template = await db.getTemplate(c.req.param("templateId"));
-  const { html, subject } = await renderTemplateEmail({
-    subject: template.subject,
-    payload: template.payload,
-    context: await c.req.json(),
-  });
-  return c.html(html);
-});
-
-export default app;
-```
-
-### API completa del renderer
-
-| Export | Descripción |
-|---|---|
-| `renderTemplateEmail(opts)` | Plantilla completa: `{ html, subject }`. **El que usarás el 95% del tiempo.** |
-| `renderEmailHtml(opts)` | Bloques ya parseados → HTML. Opciones: `{ blocks, subject?, context?, settings?, palette? }`. |
-| `parseTemplatePayload(raw)` | `string \| object \| null` → `{ content, settings }` tolerante (nunca lanza). |
-| `buildTemplateContext(base, extra)` | Limpia `null`/`""` y hace merge con `SAMPLE_CONTEXT`. |
-| `resolveVariables(text, ctx)` | Reemplaza `{key}` por valores del contexto. |
-| `renderRichText` / `sanitizeRichText` / `escapeHtml` | El mismo pipeline de richtext del editor (sanitize-html). |
-| `DEFAULT_BLOCK_LIBRARY` / `DEFAULT_PALETTE` / `DEFAULT_SETTINGS` / `DEFAULT_VARIABLES` / `SAMPLE_CONTEXT` | Defaults compartidos con el editor. |
-| Tipos | `EmailBlock`, `EmailBlockType`, `EmailBlockProps`, `EmailSettings`, `EmailPalette`, `EmailContext`, `BlockDefinition`... |
-
-Subpaths disponibles: `@repo/create-email-renderer` (todo), `/server` (helpers de plantilla), `/html-render`, `/types`, `/variables`, `/richtext`, `/default-blocks`.
+Referencia completa de parámetros, tipos y ciclo de vida: **[AGENTS.md](./AGENTS.md)**.
 
 ---
 
-## 3. Tipos clave
+## Demo
 
-```ts
-type EmailBlockType =
-  | "header" | "hero" | "heading" | "text" | "list" | "button"
-  | "image" | "quote" | "columns" | "divider" | "spacer" | "footer";
-
-interface EmailBlock {
-  id: string;
-  type: EmailBlockType;
-  props: EmailBlockProps; // props específicas por tipo + align/backgroundColor/paddingY/paddingX
-}
-
-interface EmailSettings {
-  pageBackground: string;   // "#f5f1e8"
-  cardBorderWidth: number;  // 1
-  cardBorderRadius: number; // 4
-}
-
-// Payload persistido = { content: EmailBlock[], settings: EmailSettings }
-```
-
-Las variables se escriben como `{key}` en cualquier texto del editor y se resuelven al enviar.
-
----
-
-## Desarrollo
+`apps/vite-test` → ruta **`/email-builder`** (pública): editor completo con la configuración de muestra, autoguardado, deshacer y un dialog de **comparación en vivo** entre el render de React y el HTML del renderer del backend.
 
 ```sh
-pnpm dev              # apps en dev (turbo)
-pnpm build            # build de todo (renderer primero)
-pnpm lint             # eslint en todos los packages
-pnpm check-types      # tsc en todos los packages
-pnpm --filter vite-test dev                      # solo la app de ejemplo
-pnpm --filter @repo/create-email-renderer build  # solo el renderer
+pnpm --filter vite-test dev
 ```
 
-Demo integrada: `apps/vite-test` → ruta **`/email-builder`** (pública), con botón **"Vista previa"** que compara lado a lado el render de React y el del renderer del backend.
+## Estructura del monorepo
+
+```
+apps/
+├── vite-test/            # App demo de integración (TanStack Router)
+├── template-back-end/    # API Hono + Cloudflare Workers
+└── api/
+packages/
+├── create-email-template/   # Editor visual (React)
+└── create-email-renderer/   # Core puro + render HTML (sin React)
+```
+
+## Licencia
+
+MIT

@@ -3,9 +3,9 @@ import {
   useEmailBuilderConfig,
   useEmailBuilderStoreInstance,
   useRenderEmail,
-} from "@repo/create-email-template"
-import { renderEmailHtml as renderServerEmailHtml } from "@repo/create-email-renderer/html-render"
-import { SAMPLE_CONTEXT } from "@repo/create-email-renderer/variables"
+} from "create-email-template"
+import { renderEmailHtml as renderServerEmailHtml } from "create-email-renderer/html-render"
+import { SAMPLE_CONTEXT } from "create-email-renderer/variables"
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ interface PreviewDialogProps {
 /**
  * Dialog controlado (sin DialogTrigger): compara en vivo el HTML del render
  * de React (react-email, preview del editor) contra el del renderer puro
- * que usa el backend (@repo/create-email-renderer).
+ * que usa el backend (create-email-renderer).
  */
 export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
   const store = useEmailBuilderStoreInstance()

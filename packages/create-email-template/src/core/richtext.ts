@@ -1,1 +1,1 @@
-export * from "@repo/create-email-renderer/richtext";
+export * from "create-email-renderer/richtext";

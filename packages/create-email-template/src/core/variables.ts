@@ -1,1 +1,1 @@
-export * from "@repo/create-email-renderer/variables";
+export * from "create-email-renderer/variables";

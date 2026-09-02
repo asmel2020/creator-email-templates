@@ -24,6 +24,7 @@ import { type EmailBlockType } from "../../core/types"
 import {
   useEmailBuilderConfig,
   useEmailBuilderStore,
+  useEmailBuilderStoreInstance,
 } from "../../store/email-builder-provider"
 import { BlockPalette } from "./block-palette"
 import { SortableCanvas } from "./canvas"
@@ -35,12 +36,30 @@ export interface EmailBuilderProps {
 
 export const EmailBuilder = ({ className }: EmailBuilderProps) => {
   const config = useEmailBuilderConfig()
+  const store = useEmailBuilderStoreInstance()
   const blocks = useEmailBuilderStore((s) => s.blocks)
   const selectedId = useEmailBuilderStore((s) => s.selectedId)
   const propertiesOpen = useEmailBuilderStore((s) => s.propertiesOpen)
   const setPropertiesOpen = useEmailBuilderStore((s) => s.setPropertiesOpen)
   const addBlock = useEmailBuilderStore((s) => s.addBlock)
   const reorder = useEmailBuilderStore((s) => s.reorder)
+
+  // Ctrl/Cmd+Z deshace a nivel de bloque. Si el foco está en un
+  // contenteditable, se respeta el undo nativo del editor de texto.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return
+      const target = e.target as HTMLElement | null
+      if (target?.isContentEditable || target?.closest?.("[contenteditable='true'], input, textarea, select")) {
+        return
+      }
+      if (store.getState().past.length === 0) return
+      e.preventDefault()
+      store.getState().undo()
+    }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [store])
 
   const [activeDrag, setActiveDrag] = useState<{
     type: EmailBlockType

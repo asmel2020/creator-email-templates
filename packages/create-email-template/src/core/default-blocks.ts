@@ -1,1 +1,1 @@
-export * from "@repo/create-email-renderer/default-blocks";
+export * from "create-email-renderer/default-blocks";

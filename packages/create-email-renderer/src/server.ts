@@ -2,6 +2,7 @@
 // sin React. Pensado para route handlers / servicios (Node, Workers, edge).
 import { resolveVariables, SAMPLE_CONTEXT } from "./variables.js";
 import { renderEmailHtml } from "./html-render.js";
+import { normalizeBlocks, normalizeSettings } from "./normalize.js";
 import type {
   EmailBlock,
   EmailContext,
@@ -13,7 +14,7 @@ import { DEFAULT_PALETTE } from "./default-blocks.js";
 // Nota: `renderEmailHtml` NO se re-exporta aquí a propósito — el paquete UI
 // exporta su propia versión (preview React) con el mismo nombre desde
 // core/render. Para el HTML puro: `import { renderEmailHtml } from
-// "@repo/create-email-renderer/html-render"`.
+// "create-email-renderer/html-render"`.
 
 export interface TemplatePayload {
   content: EmailBlock[];
@@ -28,8 +29,12 @@ export const parseTemplatePayload = (
     const parsed =
       typeof payload === "string" ? JSON.parse(payload) : (payload as any);
     return {
-      content: Array.isArray(parsed?.content) ? parsed.content : [],
-      settings: parsed?.settings || {},
+      // Normaliza contra el esquema actual: descarta tipos desconocidos,
+      // completa props faltantes con defaults y repara ids.
+      content: normalizeBlocks(parsed?.content),
+      settings: parsed?.settings
+        ? normalizeSettings(parsed.settings)
+        : {},
     };
   } catch {
     return { content: [], settings: {} };

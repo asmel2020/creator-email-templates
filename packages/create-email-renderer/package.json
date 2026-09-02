@@ -1,9 +1,8 @@
 {
-  "name": "@repo/create-email-renderer",
+  "name": "create-email-renderer",
   "version": "0.1.0",
   "description": "React-free email template renderer (JSON blocks -> email-safe HTML) for back-ends and edge runtimes",
   "type": "module",
-  "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -27,6 +26,10 @@
       "types": "./dist/default-blocks.d.ts",
       "import": "./dist/default-blocks.js"
     },
+    "./normalize": {
+      "types": "./dist/normalize.d.ts",
+      "import": "./dist/normalize.js"
+    },
     "./html-render": {
       "types": "./dist/html-render.d.ts",
       "import": "./dist/html-render.js"
@@ -43,7 +46,8 @@
     "build": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "prepublishOnly": "pnpm build && pnpm check-types"
   },
   "dependencies": {
     "sanitize-html": "^2.17.6"
@@ -52,5 +56,16 @@
     "@types/node": "^24",
     "@types/sanitize-html": "^2.13.0",
     "typescript": "~6"
+  },
+  "license": "MIT",
+  "author": "asmel2020",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/asmel2020/creator-email#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asmel2020/creator-email.git",
+    "directory": "packages/create-email-renderer"
   }
 }

@@ -1,5 +1,5 @@
 import { CloudUploadIcon, CloudCheckIcon, CloudAlertIcon } from "lucide-react"
-import { useAutosaveStatus } from "@repo/create-email-template"
+import { useAutosaveStatus } from "create-email-template"
 
 /** Indicador del autoguardado: usa `useAutosaveStatus()` de la librería. */
 export function AutosaveIndicator() {
