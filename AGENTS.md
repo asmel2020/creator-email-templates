@@ -241,22 +241,31 @@ Ejecución: `pnpm check-types && pnpm build` siempre antes de dar una tarea por 
 
 ## 10. Publicación npm (estado y procedimiento)
 
-**Hecho (2026-09-02):** paquetes renombrados a `create-email-template` y `create-email-renderer` (nombres sueltos, libres en npm, paquete independiente — sin marca), `private` eliminado de ambos, `license: MIT`, `publishConfig.access: "public"`, `prepublishOnly: pnpm build && pnpm check-types`, `repository`/`homepage` apuntando a `asmel2020/creator-email-templates`, README propio por paquete y workflows en `.github/workflows/` (`ci.yml` verificación en push/PR; `publish.yml` publica en tags `v*`).
+**Estado (2026-09-02): PUBLICADO.** Primera versión en npm vía GitHub Actions: `create-email-template@0.1.1` y `create-email-renderer@0.1.0` (tag `v0.1.1`). Repo: `asmel2020/creator-email-templates` (público — requerido por el provenance de npm). Setup listo: `NPM_TOKEN` en GitHub Secrets, `license: MIT`, `publishConfig.access: "public"`, `prepublishOnly: pnpm build && pnpm check-types`, README propio por paquete.
 
-**Procedimiento de publicación (GitHub Actions):**
+**Procedimiento para publicar una nueva versión:**
 
-1. Crear el repo `creator-email` en GitHub y hacer push de `main` (el repo local aún no tiene `.git`; inicializar con `git init`).
-2. npmjs.com → crear un **Access Token** de tipo Automation → GitHub → Settings → Secrets and variables → Actions → `NPM_TOKEN`.
-3. Para publicar una versión: subir `"version"` (semver) **solo de los paquetes cambiados** → commit → `git tag vX.Y.Z && git push origin vX.Y.Z`. El workflow `publish.yml` detecta vía `git diff` contra el tag anterior qué paquetes cambiaron y publica **solo esos** (un cambio solo en apps, ej. `vite-test`, no publica nada). Reglas del workflow: (a) un cambio en `create-email-renderer` también republica `create-email-template` (el renderer se empaqueta dentro de su dist); (b) guard extra: si la versión ya existe en el registry, se omite. `prepublishOnly` re-verifica build + tipos como última red de seguridad.
+```sh
+# 1. Sube "version" en packages/*/package.json SOLO de los paquetes que cambiaron.
+#    REGLA: si cambió create-email-renderer, sube la versión de AMBOS — el
+#    renderer se empaqueta dentro del dist del template, y sin bump el guard
+#    de "versión ya publicada" omitiría el template.
+# 2. Commit y tag:
+git tag vX.Y.Z && git push origin vX.Y.Z
+```
 
-Checklist restante:
+El workflow `publish.yml` hace el resto: install → build → check-types → detecta con `git diff` (contra el tag anterior) qué paquetes cambiaron → publica **solo esos** → si la versión ya existe en el registry, la omite. Cambios solo en apps (ej. `vite-test`) no publican nada. `prepublishOnly` re-verifica build + tipos como última barrera.
 
-- [x] Nombres definidos y disponibles en npm: `create-email-template`, `create-email-renderer`.
-- [x] `private` eliminado; `files: ["dist"]` y `exports` map completos con `types` por subpath.
-- [x] README por paquete + `repository`/`license`/`homepage` en package.json.
-- [x] Workflows CI + Publish creados.
-- [ ] Paso manual del usuario: token `NPM_TOKEN` en GitHub Secrets.
-- [ ] Ajustar `repository`/`homepage` si el repo final tiene otro nombre/propietario.
-- [ ] Estrategia de versionado (manual por tag hoy; migrar a Changesets si el ritmo crece).
+**Gotchas de publicación (ya corregidos en el workflow — no revertir):**
+
+1. **Fallback del primer tag**: las rutas del fallback (`packages/create-email-renderer/ packages/create-email-template/`) deben llevar **slash final** — los greps de detección exigen `^packages/<nombre>/`.
+2. **`--no-private` no existe en pnpm 9** (es de pnpm 10) → `Unknown option: 'private'`. `pnpm publish` ya omite privados por sí solo; con `--filter` ni hace falta.
+3. **`--no-git-checks` obligatorio**: el checkout de un tag deja git en detached HEAD y pnpm exige estar en `publish-branch` (master|main) sin él.
+4. **Provenance (`NPM_CONFIG_PROVENANCE: true`) solo funciona con repos PÚBLICOS**: npm rechaza el PUT con `E422 Unprocessable Entity` si el repo origen es privado. No quitarlo a menos que el repo deje de serlo.
+
+**Pendientes menores:**
+
+- [ ] Borrar el repo vacío `asmel2020/creator-email` (creado por accidente con `gh repo create`; requiere el scope `delete_repo` en gh o borrarlo desde la web).
+- [ ] **Rotar el `NPM_TOKEN`** (quedó expuesto en chat durante el setup): npmjs.com → revocar → generar uno nuevo → `gh secret set NPM_TOKEN --repo asmel2020/creator-email-templates --body "<nuevo>"`.
+- [ ] Estrategia de versionado: manual por tag hoy; migrar a Changesets si el ritmo crece.
 - [ ] `peerDependenciesMeta` del template: evaluar marcar `react` no-opcional explícito.
-- [ ] Confirmar licencia MIT como la deseada.
