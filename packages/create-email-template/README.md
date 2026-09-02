@@ -349,7 +349,7 @@ addBlock("button", 0);     // …o en una posición específica
 
 - **Estilos**: importa `create-email-template/style.css` una vez. Todo va bajo la clase `.ter-theme` con clases `ter-*` — no colisiona con tu Tailwind/CSS.
 - **Componentes sueltos**: también se exportan `BlockPalette`, `Canvas`, `PropertiesPanel`, `EditableBlockRenderer`, `InlineTextEditor`, `SelectionToolbar`, `VariablesInfoDialog` para armar un editor a medida.
-- **Demo completa**: `apps/vite-test` del [monorepo](https://github.com/asmel2020/creator-email) — editor con config de muestra, autoguardado, undo y dialog comparando el render de React vs. el HTML del backend.
+- **Demo completa**: `apps/vite-test` del [monorepo](https://github.com/asmel2020/creator-email-templates) — editor con config de muestra, autoguardado, undo y dialog comparando el render de React vs. el HTML del backend.
 
 ## Licencia
 

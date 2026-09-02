@@ -62,10 +62,10 @@
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://github.com/asmel2020/creator-email#readme",
+  "homepage": "https://github.com/asmel2020/creator-email-templates#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/asmel2020/creator-email.git",
+    "url": "git+https://github.com/asmel2020/creator-email-templates.git",
     "directory": "packages/create-email-template"
   }
 }

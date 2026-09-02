@@ -241,7 +241,7 @@ Ejecución: `pnpm check-types && pnpm build` siempre antes de dar una tarea por 
 
 ## 10. Publicación npm (estado y procedimiento)
 
-**Hecho (2026-09-02):** paquetes renombrados a `create-email-template` y `create-email-renderer` (nombres sueltos, libres en npm, paquete independiente — sin marca), `private` eliminado de ambos, `license: MIT`, `publishConfig.access: "public"`, `prepublishOnly: pnpm build && pnpm check-types`, `repository`/`homepage` apuntando a `asmel2020/creator-email`, README propio por paquete y workflows en `.github/workflows/` (`ci.yml` verificación en push/PR; `publish.yml` publica en tags `v*`).
+**Hecho (2026-09-02):** paquetes renombrados a `create-email-template` y `create-email-renderer` (nombres sueltos, libres en npm, paquete independiente — sin marca), `private` eliminado de ambos, `license: MIT`, `publishConfig.access: "public"`, `prepublishOnly: pnpm build && pnpm check-types`, `repository`/`homepage` apuntando a `asmel2020/creator-email-templates`, README propio por paquete y workflows en `.github/workflows/` (`ci.yml` verificación en push/PR; `publish.yml` publica en tags `v*`).
 
 **Procedimiento de publicación (GitHub Actions):**
 
