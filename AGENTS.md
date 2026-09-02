@@ -247,7 +247,7 @@ Ejecución: `pnpm check-types && pnpm build` siempre antes de dar una tarea por 
 
 1. Crear el repo `creator-email` en GitHub y hacer push de `main` (el repo local aún no tiene `.git`; inicializar con `git init`).
 2. npmjs.com → crear un **Access Token** de tipo Automation → GitHub → Settings → Secrets and variables → Actions → `NPM_TOKEN`.
-3. Para publicar una versión: subir `"version"` (semver) en los paquetes cambiados → commit → `git tag vX.Y.Z && git push origin vX.Y.Z`. El workflow `publish.yml` instala, compila, verifica tipos y ejecuta `pnpm publish -r --no-private --access public` (publica solo los paquetes no privados; las apps y la raíz se saltan solas). `prepublishOnly` re-verifica build + tipos como última red de seguridad.
+3. Para publicar una versión: subir `"version"` (semver) **solo de los paquetes cambiados** → commit → `git tag vX.Y.Z && git push origin vX.Y.Z`. El workflow `publish.yml` detecta vía `git diff` contra el tag anterior qué paquetes cambiaron y publica **solo esos** (un cambio solo en apps, ej. `vite-test`, no publica nada). Reglas del workflow: (a) un cambio en `create-email-renderer` también republica `create-email-template` (el renderer se empaqueta dentro de su dist); (b) guard extra: si la versión ya existe en el registry, se omite. `prepublishOnly` re-verifica build + tipos como última red de seguridad.
 
 Checklist restante:
 

@@ -17,6 +17,9 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Historial completo para poder comparar contra el tag anterior
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -37,8 +40,59 @@ jobs:
       - name: Check types
         run: pnpm check-types
 
-      - name: Publish (skip private packages)
-        run: pnpm publish -r --no-private --access public
+      # Solo se publican los paquetes con cambios reales. Si solo cambió una
+      # app (ej. vite-test), no se publica nada: no hay nueva versión que subir.
+      # Nota: el renderer se empaqueta DENTRO de create-email-template, así que
+      # un cambio en el renderer también obliga a republicar el template.
+      - name: Detect changed packages
+        id: changes
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          if [ -n "$PREV_TAG" ]; then
+            CHANGED=$(git diff --name-only "${PREV_TAG}..${GITHUB_SHA}")
+          else
+            # Primer tag publicado: sin referencia previa, se publican ambos
+            CHANGED="packages/create-email-renderer packages/create-email-template"
+          fi
+          RENDERER=no
+          TEMPLATE=no
+          if echo "$CHANGED" | grep -q "^packages/create-email-renderer/"; then
+            RENDERER=yes
+          fi
+          if echo "$CHANGED" | grep -q "^packages/create-email-template/"; then
+            TEMPLATE=yes
+          fi
+          if [ "$RENDERER" = "yes" ]; then
+            TEMPLATE=yes
+          fi
+          echo "renderer=$RENDERER" >> "$GITHUB_OUTPUT"
+          echo "template=$TEMPLATE" >> "$GITHUB_OUTPUT"
+          echo "Paquetes a publicar → renderer: $RENDERER · template: $TEMPLATE"
+
+      # Doble guard: aunque hubiera cambios, no se publica si la versión del
+      # package.json ya existe en el registry (tag re-pusheado, etc.)
+      - name: Publish create-email-renderer
+        if: steps.changes.outputs.renderer == 'yes'
+        run: |
+          VERSION=$(node -p "require('./packages/create-email-renderer/package.json').version")
+          if npm view "create-email-renderer@$VERSION" version > /dev/null 2>&1; then
+            echo "create-email-renderer@$VERSION ya existe en npm — se omite"
+          else
+            pnpm --filter create-email-renderer publish --no-private --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Publish create-email-template
+        if: steps.changes.outputs.template == 'yes'
+        run: |
+          VERSION=$(node -p "require('./packages/create-email-template/package.json').version")
+          if npm view "create-email-template@$VERSION" version > /dev/null 2>&1; then
+            echo "create-email-template@$VERSION ya existe en npm — se omite"
+          else
+            pnpm --filter create-email-template publish --no-private --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
