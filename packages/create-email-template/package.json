@@ -1,6 +1,6 @@
 {
   "name": "create-email-template",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Reusable email template builder (blocks, canvas, options) with a zero-dependency React store and shadcn/ui",
   "type": "module",
   "main": "./dist/index.js",

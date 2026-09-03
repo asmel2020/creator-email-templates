@@ -85,6 +85,20 @@
    variables sin definir fuera de .ter-theme, dejaban el body sin color). El
    builder está anclado en .ter-theme de arriba. */
 
+/* Preflight mínimo de controles, con especificidad :where() para no ganarle a
+   las variantes .ter-button--* ni a las utilidades ter-bg-*. Sin él, los hosts
+   sin Tailwind preflight pintan <button> con el gris del UA (buttonface)
+   debajo de los iconos blancos de las toolbars. */
+:where(.ter-theme) button,
+:where(.ter-theme) input,
+:where(.ter-theme) select,
+:where(.ter-theme) textarea {
+  font: inherit;
+  color: inherit;
+  background-color: transparent;
+  background-image: none;
+}
+
 /* ========== TER utilities (prefijo ter- para evitar colisiones) ========== */
 .ter-flex { display: flex; }
 .ter-inline-flex { display: inline-flex; }
