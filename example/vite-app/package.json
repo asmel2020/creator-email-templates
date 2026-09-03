@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "create-email-renderer": "^0.1.0",
-    "create-email-template": "^0.1.2",
+    "create-email-template": "^0.1.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

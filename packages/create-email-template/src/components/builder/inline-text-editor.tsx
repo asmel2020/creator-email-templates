@@ -346,14 +346,18 @@ export const InlineTextEditor = ({
       />
       {rich && toolbar &&
         createPortal(
-          <SelectionToolbar
-            innerRef={toolbarRef}
-            style={{ position: "fixed", top: toolbar.top, left: toolbar.left }}
-            onFormat={handleFormat}
-            selectionSize={selInfo.uniform}
-            selectionMaxSize={selInfo.max}
-            selectionColor={selInfo.color}
-          />,
+          // Portal al body: sin el wrapper ter-theme, los botones heredan los
+          // estilos del host (los <button> sin fondo propio cogen el gris del UA).
+          <div className="ter-theme">
+            <SelectionToolbar
+              innerRef={toolbarRef}
+              style={{ position: "fixed", top: toolbar.top, left: toolbar.left }}
+              onFormat={handleFormat}
+              selectionSize={selInfo.uniform}
+              selectionMaxSize={selInfo.max}
+              selectionColor={selInfo.color}
+            />
+          </div>,
           document.body,
         )}
     </div>
