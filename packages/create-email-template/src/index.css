@@ -34,10 +34,19 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Autocontenido: no depende del color/background del host ni de que un host
+     en modo oscuro imponga color-scheme: dark (los textos sin clase de color
+     heredan de aquí, no del body del consumidor). */
+  color: var(--foreground);
+  background: var(--background);
+  color-scheme: light;
+  font-family: var(--font-sans);
 }
 
 .ter-theme.ter-dark,
 .dark .ter-theme {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -72,8 +81,9 @@
 }
 
 * { box-sizing: border-box; border: 0 solid; margin: 0; padding: 0; }
-html { font-family: 'Geist Variable', sans-serif; scroll-behavior: smooth; }
-body { background: var(--background); color: var(--foreground); }
+/* Sin reglas globales en html/body: pisaban los estilos del host (y con las
+   variables sin definir fuera de .ter-theme, dejaban el body sin color). El
+   builder está anclado en .ter-theme de arriba. */
 
 /* ========== TER utilities (prefijo ter- para evitar colisiones) ========== */
 .ter-flex { display: flex; }
