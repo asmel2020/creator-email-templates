@@ -60,7 +60,7 @@ packages/
 │       │   ├── blocks.tsx   # EmailTemplate/BlockRenderer react-email (SOLO preview cliente)
 │       │   ├── render.tsx   # renderEmailHtml (versión React, preview; usa @react-email/render)
 │       │   ├── normalize.ts / types.ts / variables.ts / richtext.ts / default-blocks.ts / template.ts
-│       │   └── id.ts        # newId() = crypto.randomUUID (local, 3 líneas)
+│       │   └── id.ts        # shim: reexporta newId del renderer
 │       ├── config/          # types.ts (EmailBuilderConfig, AutosaveOptions, labels) + defaults.ts (resolve)
 │       ├── store/           # vanilla-store.ts (store genérico), create-email-builder-store.ts (estado+undo),
 │       │                    # email-builder-provider.tsx (contextos), autosave-context.tsx
@@ -79,7 +79,7 @@ packages/
         ├── normalize.ts     # normalizeBlocks/normalizeSettings (defensa contra payloads legacy)
         ├── html-render.ts   # renderEmailHtml: JSON → HTML email-safe (tablas + inline styles)
         ├── server.ts        # parseTemplatePayload (normaliza), renderTemplateEmail, buildTemplateContext
-        └── id.ts            # newId = crypto.randomUUID
+        └── id.ts            # newId = UUID v7-like (timestamp + contador), sin crypto/Math.random (Workers)
 ```
 
 Demo clave: `apps/vite-test/src/routes/email-builder.tsx` es una ruta pública que solo importa la feature; `.agents/skills/manage-dialogs-zustand/SKILL.md` define el patrón de dialogs que usa.
@@ -193,7 +193,7 @@ Patrón de `.agents/skills/manage-dialogs-zustand/SKILL.md`: store zustand por f
 
 **`create-email-renderer`**
 - ESM puro, `module: NodeNext` → **imports relativos siempre con `.js`** (`from "./types.js"`).
-- Sin JSX, sin React, sin DOM salvo APIs estándar (`crypto.randomUUID` en `id.ts`; `lib: ["ES2022","DOM"]`).
+- Sin JSX, sin React, sin DOM salvo APIs estándar (`lib: ["ES2022","DOM"]`). `id.ts` genera ids sin crypto ni `Math.random`: Workers prohíbe aleatoriedad en el arranque y `DEFAULT_BLOCK_LIBRARY` crea ids al importar.
 - Estilo: comillas dobles, punto y coma. Build = `tsc -p tsconfig.json` (emite `.d.ts` + sourcemaps). `files: ["dist"]`.
 - Todo helper nuevo debe ser puro y no-lanzador; la tolerancia a datos corruptos es requisito.
 
