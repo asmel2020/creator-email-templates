@@ -222,6 +222,7 @@ Patrón de `.agents/skills/manage-dialogs-zustand/SKILL.md`: store zustand por f
 7. **Exports subpath**: al añadir un módulo público al renderer, actualiza `exports` del package.json Y emite `.d.ts` (tsc lo hace) Y el shim en el paquete UI si aplica.
 8. **routeTree.gen.ts**: al crear rutas en apps TanStack, se regenera con `vite build`/`vite dev` — no lo edites a mano; si `tsc -b` falla por una ruta nueva, ejecuta `vite build` primero.
 9. **`private: true`** en ambos paquetes: se consumen por `workspace:*`. Cambiar solo al publicar (ver §10).
+10. **Selectores globales en el CSS de la lib**: el `dist/style.css` llega sin capas; cualquier selector no scopeado bajo `.ter-theme` (`*`, `button`, `:root`…) gana **siempre** a las utilidades `@layer` del host (Tailwind v4) y rompe la página entera del consumidor — ocurrió con el reset `*` hasta v0.1.4. Reglas: todo bajo `.ter-theme`/`ter-*` con `:where()` para mantener especificidad baja; los portales (dialog/sheet/SelectionToolbar) deben envolverse en `.ter-theme`. Lo vigila `check:css-scope` (`scripts/check-css-scope.mjs`, corre en `prepublishOnly`).
 
 ---
 

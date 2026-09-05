@@ -1,6 +1,6 @@
 {
   "name": "create-email-template",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Reusable email template builder (blocks, canvas, options) with a zero-dependency React store and shadcn/ui",
   "type": "module",
   "main": "./dist/index.js",
@@ -23,7 +23,8 @@
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "check-types": "tsc -p tsconfig.app.json --noEmit",
-    "prepublishOnly": "pnpm build && pnpm check-types"
+    "check:css-scope": "node scripts/check-css-scope.mjs",
+    "prepublishOnly": "pnpm build && pnpm check-types && pnpm check:css-scope"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

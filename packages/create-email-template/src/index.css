@@ -80,10 +80,16 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-* { box-sizing: border-box; border: 0 solid; margin: 0; padding: 0; }
-/* Sin reglas globales en html/body: pisaban los estilos del host (y con las
-   variables sin definir fuera de .ter-theme, dejaban el body sin color). El
-   builder está anclado en .ter-theme de arriba. */
+/* Reset universal SCOPEADO a .ter-theme. Como selector global y sin capa,
+   pisaba las utilidades @layer de hosts con Tailwind v4 (unlayered siempre
+   gana a cualquier capa: p-4, border... morían en toda la página host).
+   :where() mantiene especificidad 0 para no alterar la cascada interna. */
+:where(.ter-theme, .ter-theme *, .ter-theme *::before, .ter-theme *::after) {
+  box-sizing: border-box;
+  border: 0 solid;
+  margin: 0;
+  padding: 0;
+}
 
 /* Preflight mínimo de controles, con especificidad :where() para no ganarle a
    las variantes .ter-button--* ni a las utilidades ter-bg-*. Sin él, los hosts

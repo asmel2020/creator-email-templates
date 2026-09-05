@@ -347,7 +347,8 @@ addBlock("button", 0);     // …o en una posición específica
 
 ## Notas
 
-- **Estilos**: importa `create-email-template/style.css` una vez. Todo va bajo la clase `.ter-theme` con clases `ter-*` — no colisiona con tu Tailwind/CSS.
+- **Estilos**: importa `create-email-template/style.css` una vez. Todo va bajo la clase `.ter-theme` con clases `ter-*` — no colisiona con tu Tailwind/CSS: ningún selector global, así que no pisa tus `@layer` ni tus utilidades (verificado por `check:css-scope` en el build del paquete).
+  - **Versiones < 0.1.5**: el reset universal `*` salía sin scope y, al llegar sin capa, podía pisar utilidades de apps con Tailwind v4 (`p-4`, `border`…). Actualiza a `>= 0.1.5`; si no puedes, cárgalo en una capa de baja prioridad: `@import 'create-email-template/style.css' layer(email-lib);` (declarando `@layer email-lib;` antes de tu `@import 'tailwindcss'`).
 - **Componentes sueltos**: también se exportan `BlockPalette`, `Canvas`, `PropertiesPanel`, `EditableBlockRenderer`, `InlineTextEditor`, `SelectionToolbar`, `VariablesInfoDialog` para armar un editor a medida.
 - **Demo completa**: `apps/vite-test` del [monorepo](https://github.com/asmel2020/creator-email-templates) — editor con config de muestra, autoguardado, undo y dialog comparando el render de React vs. el HTML del backend.
 
