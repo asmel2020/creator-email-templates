@@ -80,12 +80,16 @@ packages/
         ├── html-render.ts   # renderEmailHtml: JSON → HTML email-safe (tablas + inline styles)
         ├── build.ts         # blockJson(type, props?) / templateJson: constructor tipado de bloques
         ├── tracking.ts      # applyTracking: pixel de apertura + reescritura de enlaces (opt-in)
+        ├── SKILL.md         # orientación para agentes (se publica: va en "files")
+        ├── docs/BLOCKS.md   # catálogo de los 25 bloques (props, variantes, ejemplos) — lo vigila test/docs.test.ts
+        ├── docs/MCP.md      # cómo exponer el paquete como servidor MCP
+        ├── llms.txt         # índice corto para agentes (convención llms.txt)
         ├── records.ts       # interno: coerción + RECORD_ARRAY_FIELDS (normalize y build)
         ├── server.ts        # parseTemplatePayload (normaliza), renderTemplateEmail, buildTemplateContext
         └── id.ts            # newId = UUID v7-like (timestamp + contador), sin crypto/Math.random (Workers)
 ```
 
-Demo clave: `apps/vite-test/src/routes/email-builder.tsx` es una ruta pública que solo importa la feature; `.agents/skills/manage-dialogs-zustand/SKILL.md` define el patrón de dialogs que usa.
+Demo clave: `apps/vite-test/src/routes/email-builder.tsx` es una ruta pública que solo importa la feature; `.agents/skills/manage-dialogs-zustand/SKILL.md` define el patrón de dialogs que usa. El skill `.agents/skills/create-email-builder/SKILL.md` es el puntero de repo a toda la documentación para agentes.
 
 ---
 
@@ -143,6 +147,8 @@ Editor ──getPayload()──▶ { content: EmailBlock[], settings }  ──PU
 | `resolveVariables(text, ctx)` / `extractVariables` / `validateVariables` | Sintaxis `{key}`. |
 | `renderRichText` / `sanitizeRichText` / `escapeHtml` / `normalizeBlockHtml` / `isRichText` | Pipeline richtext (sanitize-html). |
 | Defaults | `DEFAULT_BLOCK_LIBRARY`, `DEFAULT_PALETTE`, `DEFAULT_SETTINGS`, `DEFAULT_VARIABLES`, `DEFAULT_BASE_VARIABLES`, `DEFAULT_CONTEXTUAL_VARIABLES`, `SAMPLE_CONTEXT`. |
+
+**Documentación publicada con el paquete** (viaja en `npm install`, `files: ["dist","SKILL.md","llms.txt","docs"]`): `SKILL.md` (orientación para agentes), `docs/BLOCKS.md` (catálogo de los 25 bloques con props/defaults/variantes y ejemplos `blockJson`), `docs/MCP.md` (tools y código para montar un MCP) y `llms.txt`. En `create-email-template` solo `SKILL.md` + `llms.txt` (el catálogo es el del renderer). `test/docs.test.ts` falla si un bloque o una API deja de estar documentado.
 | Tipos | `EmailBlock`, `EmailBlockType` (25), `EmailBlockProps` (unión por tipo), `ColumnDef`, `ContainerProps`, `EmailSettings`, `EmailPalette`, `EmailContext`, `BlockDefinition`, `EmailVariable(Section)`, `isContainerType`, `MAX_BLOCK_DEPTH`. `BlockCommonProps` incluye layout: `paddingY/paddingX` + overrides `paddingTop/Right/Bottom/Left`, `marginTop/marginBottom`, `gap`. |
 
 **Contrato del endpoint de guardado** (a implementar en template-back-end):

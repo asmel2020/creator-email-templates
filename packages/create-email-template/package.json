@@ -15,7 +15,9 @@
     "./style.css": "./dist/style.css"
   },
   "files": [
-    "dist"
+    "dist",
+    "SKILL.md",
+    "llms.txt"
   ],
   "scripts": {
     "build": "vite build && tsc -p tsconfig.build.json",

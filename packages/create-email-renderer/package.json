@@ -48,7 +48,10 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "SKILL.md",
+    "llms.txt",
+    "docs"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

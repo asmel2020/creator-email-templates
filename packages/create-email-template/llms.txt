@@ -1,0 +1,15 @@
+# create-email-template
+
+> React email template builder UI (drag & drop + autosave) backed by create-email-renderer.
+
+## Docs
+- [SKILL.md](./SKILL.md): orientation for agents — provider, hooks, store, presets, CSS.
+- [README.md](./README.md): public API reference (EmailBuilder, hooks, config, autosave).
+- Block catalog (shared core): node_modules/create-email-renderer/docs/BLOCKS.md
+- MCP guide: node_modules/create-email-renderer/docs/MCP.md
+
+## Quick start
+- `import "create-email-template/style.css"` is REQUIRED (scoped under .ter-theme)
+- `<EmailBuilderProvider config? uploadImage? autosave?><EmailBuilder /></EmailBuilderProvider>`
+- Hooks: useRenderEmail, useAutosaveStatus, useEmailBuilderStore, useEmailBuilderStoreInstance, useEmailBuilderConfig
+- Payload: `{ content, settings }` (render it on the back-end with create-email-renderer)

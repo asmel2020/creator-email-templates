@@ -1,0 +1,15 @@
+# create-email-renderer
+
+> React-free email template renderer: JSON blocks -> email-safe HTML for back-ends, Workers and edge.
+
+## Docs
+- [SKILL.md](./SKILL.md): orientation for agents — mental model, flows, recipes, golden rules.
+- [docs/BLOCKS.md](./docs/BLOCKS.md): catalog of the 25 built-in blocks (props, defaults, variants, examples).
+- [docs/MCP.md](./docs/MCP.md): how to expose this package as an MCP server (tools + code).
+- [README.md](./README.md): public API reference (renderTemplateEmail, blockJson, tracking, typography).
+
+## Quick start
+- `renderTemplateEmail({ subject, payload, context, settings, tracking })` -> `{ html, subject }`
+- `blockJson(type, props?)` / `templateJson(blocks, settings?)` -> build a payload in code
+- `parseTemplatePayload(raw)` -> `{ content, settings }` (never throws)
+- Subpaths: /server /html-render /build /normalize /types /variables /richtext /default-blocks /registry

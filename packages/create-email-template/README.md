@@ -4,6 +4,15 @@ Editor visual de plantillas de email por bloques para React: palette, canvas con
 
 El JSON que produce se renderiza a HTML email-safe con su compañero [`create-email-renderer`](https://www.npmjs.com/package/create-email-renderer) (**sin React**, pensado para backend/edge). Ambas librerías comparten el mismo core, por lo que el preview del editor y el HTML final nunca divergen.
 
+## ¿Programas con una IA o vas a integrarlo?
+
+- **[`SKILL.md`](./SKILL.md)** — orientación para agentes: provider, hooks, store, presets, CSS
+  obligatorio y errores comunes.
+- **[`llms.txt`](./llms.txt)** — índice corto.
+- **Catálogo de bloques** (core compartido): `node_modules/create-email-renderer/docs/BLOCKS.md`
+  — props, defaults, variantes y ejemplos de los 25 bloques.
+- **Guía de MCP**: `node_modules/create-email-renderer/docs/MCP.md`.
+
 ## Instalación
 
 ```sh

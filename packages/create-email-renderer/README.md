@@ -4,6 +4,18 @@ Renderiza plantillas de email por bloques a **HTML email-safe sin React**. JS pu
 
 Es el compañero de [`create-email-template`](https://www.npmjs.com/package/create-email-template) (editor visual). Comparten el mismo core: los tipos, los defaults y la normalización son idénticos en ambos lados, por lo que el preview del editor y el HTML final nunca divergen.
 
+## ¿Programas con una IA o vas a integrarlo?
+
+La documentación para agentes viaja dentro del paquete:
+
+- **[`SKILL.md`](./SKILL.md)** — orientación: modelo mental del payload, los 3 flujos, recetas
+  (tarea → API) y reglas de oro.
+- **[`docs/BLOCKS.md`](./docs/BLOCKS.md)** — catálogo de los **25 bloques** con props, defaults,
+  variantes y ejemplos `blockJson` copiables.
+- **[`docs/MCP.md`](./docs/MCP.md)** — cómo exponer el renderer como **servidor MCP** (tools
+  `list_blocks`, `build_block`, `render_email`, `validate_template`…).
+- **[`llms.txt`](./llms.txt)** — índice corto para herramientas que lo buscan por convención.
+
 ## Instalación
 
 ```sh

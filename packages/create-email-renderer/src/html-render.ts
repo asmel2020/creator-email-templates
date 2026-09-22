@@ -159,6 +159,21 @@ const text = (
   style: Record<string, string | number | undefined>,
 ): string => `<p style="${styleToString(style)}">${content}</p>`;
 
+/**
+ * Enlace si hay `href`; si no, el mismo contenido como texto (`<span>`).
+ * Evita emitir `<a href="">`, que recargaría el correo al pulsarlo y se
+ * anunciaría como enlace. Un CTA sin destino se sigue viendo igual.
+ */
+const linkOrSpan = (
+  href: string,
+  style: string,
+  inner: string,
+  attributes = ' target="_blank"',
+): string =>
+  href
+    ? `<a href="${escapeHtml(href)}"${attributes} style="${style}">${inner}</a>`
+    : `<span style="${style}">${inner}</span>`;
+
 const renderHeader = (
   props: HeaderProps,
   context: EmailContext,
@@ -331,7 +346,11 @@ const renderButton = (
         ? { backgroundColor: props.blockBackgroundColor }
         : {}),
     },
-    `<a href="${escapeHtml(resolveVariables(props.href, context))}" target="_blank" style="${styleToString({ backgroundColor: props.backgroundColor || palette.GOLD, color: props.color || palette.DARK, fontWeight: 700, padding: "14px 28px", borderRadius: 999, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", display: "inline-block", textDecoration: "none" })}">${escapeHtml(resolveVariables(props.label, context))}</a>`,
+    linkOrSpan(
+      resolveVariables(props.href, context),
+      styleToString({ backgroundColor: props.backgroundColor || palette.GOLD, color: props.color || palette.DARK, fontWeight: 700, padding: "14px 28px", borderRadius: 999, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", display: "inline-block", textDecoration: "none" }),
+      escapeHtml(resolveVariables(props.label, context)),
+    ),
   );
 
 const renderImage = (
@@ -536,15 +555,19 @@ const renderSocial = (
   const half = (props.gap ?? 6) / 2;
   const links = (props.links || [])
     .map((l) => {
-      const href = escapeHtml(resolveVariables(l.href, context));
+      const href = resolveVariables(l.href, context);
       if (logo) {
         const icon = (l.icon || "").trim();
         const inner = isRemoteAsset(icon)
           ? `<img src="${escapeHtml(resolveVariables(icon, context))}" alt="${escapeHtml(l.label)}" width="${size}" height="${size}" style="display:inline-block;border:0;border-radius:50%;width:${size}px;height:${size}px;object-fit:cover;" />`
           : `<span style="${styleToString({ display: "inline-block", width: size, height: size, lineHeight: `${size}px`, textAlign: "center", borderRadius: "50%", backgroundColor: accent, color: palette.DARK, fontSize: Math.round(size * 0.4), fontWeight: 700 })}">${escapeHtml(icon || resolveVariables(l.label, context).slice(0, 2))}</span>`;
-        return `<a href="${href}" target="_blank" style="display:inline-block;margin:0 ${half}px;text-decoration:none;">${inner}</a>`;
+        return linkOrSpan(href, `display:inline-block;margin:0 ${half}px;text-decoration:none;`, inner);
       }
-      return `<a href="${href}" target="_blank" style="${styleToString({ color: props.color || palette.INK, fontSize: 13, fontWeight: 600, textDecoration: "none", margin: "0 10px", display: "inline-block" })}">${escapeHtml(resolveVariables(l.label, context))}</a>`;
+      return linkOrSpan(
+        href,
+        styleToString({ color: props.color || palette.INK, fontSize: 13, fontWeight: 600, textDecoration: "none", margin: "0 10px", display: "inline-block" }),
+        escapeHtml(resolveVariables(l.label, context)),
+      );
     })
     .join("");
   return section(
@@ -760,7 +783,11 @@ const renderPricingCard = (
     )
     .join("");
   const cta = props.ctaLabel
-    ? `<a href="${escapeHtml(resolveVariables(props.ctaHref, context))}" target="_blank" style="${styleToString({ backgroundColor: accent, color: palette.DARK, fontWeight: 700, padding: "12px 24px", borderRadius: 999, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", display: "inline-block", textDecoration: "none", marginTop: 16 })}">${escapeHtml(resolveVariables(props.ctaLabel, context))}</a>`
+    ? linkOrSpan(
+        resolveVariables(props.ctaHref, context),
+        styleToString({ backgroundColor: accent, color: palette.DARK, fontWeight: 700, padding: "12px 24px", borderRadius: 999, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", display: "inline-block", textDecoration: "none", marginTop: 16 }),
+        escapeHtml(resolveVariables(props.ctaLabel, context)),
+      )
     : "";
   const card = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:420px;margin:0 auto;"><tbody><tr><td style="${styleToString({ border: "1px solid #e3dccb", borderRadius: 10, padding: 24, textAlign: "center" })}"><div style="${styleToString({ color: accent, fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" })}">${renderRichText(resolveVariables(props.title, context))}</div><div style="${styleToString({ color: textColor, fontSize: 36, fontWeight: 700, lineHeight: 1.1, margin: 0 })}">${renderRichText(resolveVariables(props.price, context))}<span style="${styleToString({ fontSize: 14, fontWeight: 400, color: palette.CREAM_DIM })}">${escapeHtml(props.period || "")}</span></div><div style="${styleToString({ margin: "16px 0 0", textAlign: "left" })}">${bullets}</div>${cta}</td></tr></tbody></table>`;
   return section({ ...blockSpacing(props), ...bgStyle(props) }, card);
@@ -776,7 +803,11 @@ const pricingButton = (
   context: EmailContext,
 ): string => {
   if (!label) return "";
-  return `<a href="${escapeHtml(resolveVariables(href || "", context))}" target="_blank" style="${styleToString({ backgroundColor: background, color, borderRadius: options.radius, boxSizing: "border-box", display: "block", fontSize: options.fontSize, lineHeight: options.lineHeight, fontWeight: options.fontWeight, letterSpacing: "0.025em", padding: options.padding, textAlign: "center", textDecoration: "none", width: "100%" })}">${escapeHtml(resolveVariables(label, context))}</a>`;
+  return linkOrSpan(
+    resolveVariables(href || "", context),
+    styleToString({ backgroundColor: background, color, borderRadius: options.radius, boxSizing: "border-box", display: "block", fontSize: options.fontSize, lineHeight: options.lineHeight, fontWeight: options.fontWeight, letterSpacing: "0.025em", padding: options.padding, textAlign: "center", textDecoration: "none", width: "100%" }),
+    escapeHtml(resolveVariables(label, context)),
+  );
 };
 
 const pricingRichList = (
@@ -878,7 +909,11 @@ const productButton = (
   context: EmailContext,
   style: Record<string, string | number | undefined>,
 ): string =>
-  `<a href="${escapeHtml(resolveVariables(href, context))}" target="_blank" style="${styleToString({ backgroundColor: "#4f46e5", color: "#ffffff", borderRadius: 8, padding: "12px 24px", fontSize: 16, fontWeight: 600, textDecoration: "none", display: "inline-block", textAlign: "center", ...style })}">${escapeHtml(resolveVariables(label, context))}</a>`;
+  linkOrSpan(
+    resolveVariables(href, context),
+    styleToString({ backgroundColor: "#4f46e5", color: "#ffffff", borderRadius: 8, padding: "12px 24px", fontSize: 16, fontWeight: 600, textDecoration: "none", display: "inline-block", textAlign: "center", ...style }),
+    escapeHtml(resolveVariables(label, context)),
+  );
 
 /** Imagen de producto con alto fijo y recorte (o placeholder). */
 const productImage = (
@@ -911,7 +946,11 @@ const renderProductCard = (
     : "";
   const price = `<div style="${styleToString({ color: palette.GOLD, fontSize: 20, fontWeight: 700, margin: "0 0 16px" })}">${renderRichText(resolveVariables(props.price, context))}</div>`;
   const cta = props.ctaLabel
-    ? `<a href="${escapeHtml(resolveVariables(props.ctaHref, context))}" target="_blank" style="${styleToString({ backgroundColor: palette.GOLD, color: palette.DARK, fontWeight: 700, padding: "12px 24px", borderRadius: 999, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", display: "inline-block", textDecoration: "none" })}">${escapeHtml(resolveVariables(props.ctaLabel, context))}</a>`
+    ? linkOrSpan(
+        resolveVariables(props.ctaHref, context),
+        styleToString({ backgroundColor: palette.GOLD, color: palette.DARK, fontWeight: 700, padding: "12px 24px", borderRadius: 999, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", display: "inline-block", textDecoration: "none" }),
+        escapeHtml(resolveVariables(props.ctaLabel, context)),
+      )
     : "";
   return section(
     {
@@ -1240,7 +1279,11 @@ const renderLink = (
       ...blockSpacing(props),
       ...bgStyle(props),
     },
-    `<a href="${escapeHtml(resolveVariables(props.href, context))}" target="_blank" style="${styleToString({ color: props.color || palette.GOLD, fontSize: 15, fontWeight: 600, textDecoration: "underline" })}">${escapeHtml(resolveVariables(props.label, context))}</a>`,
+    linkOrSpan(
+      resolveVariables(props.href, context),
+      styleToString({ color: props.color || palette.GOLD, fontSize: 15, fontWeight: 600, textDecoration: "underline" }),
+      escapeHtml(resolveVariables(props.label, context)),
+    ),
   );
 
 /** Tabla de columnas (celdas con ancho y gutter) compartida por grid/footer. */
