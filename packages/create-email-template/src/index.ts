@@ -21,6 +21,8 @@ export * from "./block-views";
 export * from "./components/builder/field-editors";
 export * from "./footer-presets";
 export * from "./gallery-presets";
+export * from "./list-presets";
+export * from "./product-presets";
 export * from "./pricing-presets";
 
 // Store (Zustand por instancia + provider)

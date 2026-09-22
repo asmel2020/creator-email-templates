@@ -83,6 +83,8 @@ export type BlockFieldDef =
       key: string
       label: string
       itemLabel: string
+      /** No numera las filas ("Plan" en vez de "Plan 1"). */
+      hideIndex?: boolean
       fields: BlockFieldDef[]
     }
   | { kind: "custom"; id: string }

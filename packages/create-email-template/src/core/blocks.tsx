@@ -39,6 +39,8 @@ import type {
   GalleryProps,
   StatsProps,
   PricingProps,
+  CheckoutProps,
+  ProductItem,
   ProductProps,
   TestimonialProps,
   FeaturesProps,
@@ -268,6 +270,132 @@ const BlockText = ({
   </Section>
 )
 
+/** Badge circular con el número del paso (24px, como react.email). */
+const ListBadge = ({ label, accent }: { label: string; accent: string }) => (
+  <table
+    role="presentation"
+    border={0}
+    cellPadding={0}
+    cellSpacing={0}
+    style={{ borderCollapse: "collapse" }}
+  >
+    <tbody>
+      <tr>
+        <td
+          width={24}
+          height={24}
+          align="center"
+          valign="middle"
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: 9999,
+            backgroundColor: accent,
+            color: "#ffffff",
+            fontSize: 12,
+            fontWeight: 600,
+            lineHeight: 1,
+            textAlign: "center",
+          }}
+        >
+          {label}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+)
+
+const ListEntryRow = ({
+  entry,
+  index,
+  context,
+  palette,
+  accent,
+  radius,
+  imageHeight,
+  withImage,
+  marginBottom,
+}: {
+  entry: { number?: string; title: string; description?: string; image?: string; href?: string; linkLabel?: string }
+  index: number
+  context: EmailContext
+  palette: EmailPalette
+  accent: string
+  radius: number
+  imageHeight: number
+  withImage: boolean
+  marginBottom: number
+}) => {
+  const badge = (
+    <ListBadge
+      label={entry.number && entry.number.trim() !== "" ? entry.number : String(index + 1)}
+      accent={accent}
+    />
+  )
+  const title = (
+    <div style={{ color: palette.DARK, fontSize: 18, fontWeight: 700, lineHeight: 1.4, margin: "0 0 4px" }}>
+      {entry.title}
+    </div>
+  )
+  const description = entry.description ? (
+    <div style={{ color: palette.INK, fontSize: 13, lineHeight: 1.5, margin: 0 }}>
+      {entry.description}
+    </div>
+  ) : null
+  const link = entry.href ? (
+    <Link
+      href={resolveVariables(entry.href, context)}
+      style={{ color: accent, fontSize: 14, fontWeight: 600, textDecoration: "none", display: "block", marginTop: 12 }}
+    >
+      {entry.linkLabel || "Aprender más →"}
+    </Link>
+  ) : null
+
+  if (!withImage) {
+    return (
+      <Row style={{ marginBottom }}>
+        <Column width={24} style={{ width: 24, verticalAlign: "top", paddingRight: 18 }}>
+          {badge}
+        </Column>
+        <Column style={{ verticalAlign: "top" }}>
+          {title}
+          {description}
+          {link}
+        </Column>
+      </Row>
+    )
+  }
+  return (
+    <Row style={{ marginBottom }}>
+      <Column width="40%" style={{ width: "40%", verticalAlign: "top", paddingRight: 24 }}>
+        {entry.image ? (
+          <Img
+            src={resolveVariables(entry.image, context)}
+            alt={entry.title}
+            width="100%"
+            height={imageHeight}
+            style={{
+              width: "100%",
+              display: "block",
+              borderRadius: radius,
+              height: imageHeight,
+              objectFit: "cover",
+              objectPosition: "center",
+            }}
+          />
+        ) : (
+          <Text style={{ color: palette.CREAM_DIM, fontSize: 12, margin: 0 }}>(Imagen)</Text>
+        )}
+      </Column>
+      <Column width="60%" style={{ width: "60%", verticalAlign: "top", paddingRight: 24 }}>
+        {title}
+        {description}
+        {link}
+      </Column>
+    </Row>
+  )
+}
+
 const BlockList = ({
   props,
   context,
@@ -276,46 +404,65 @@ const BlockList = ({
   props: ListProps
   context: EmailContext
   palette: EmailPalette
-}) => (
-  <Section
-    style={{
-      ...blockSpacing(props),
-      ...(props.backgroundColor
-        ? { backgroundColor: props.backgroundColor }
-        : {}),
-    }}
-  >
-    {props.items.map((item, i) => (
-      <Row key={i} style={{ marginBottom: 8 }}>
-        <Column width={24} style={{ verticalAlign: "top" }}>
-          <Text
-            style={{
-              color: palette.GOLD,
-              fontWeight: 700,
-              margin: 0,
-              fontSize: 14,
-            }}
-          >
-            {props.icon || "✓"}
-          </Text>
-        </Column>
-        <Column style={{ verticalAlign: "top" }}>
-          <div
-            style={{
-              color: palette.INK,
-              fontSize: 14,
-              lineHeight: 1.5,
-              margin: 0,
-            }}
-            dangerouslySetInnerHTML={{
-              __html: renderRichText(resolveVariables(item, context)),
-            }}
-          />
-        </Column>
-      </Row>
-    ))}
-  </Section>
-)
+}) => {
+  const accent = props.accentColor || palette.GOLD
+  const entries = props.entries || []
+  return (
+    <Section
+      style={{
+        ...blockSpacing(props),
+        ...(props.backgroundColor
+          ? { backgroundColor: props.backgroundColor }
+          : {}),
+      }}
+    >
+      {props.variant === "numbered" || props.variant === "with-image"
+        ? entries.map((entry, i) => (
+            <ListEntryRow
+              key={entry.id}
+              entry={entry}
+              index={i}
+              context={context}
+              palette={palette}
+              accent={accent}
+              radius={props.radius ?? 4}
+              imageHeight={props.imageHeight ?? 168}
+              withImage={props.variant === "with-image"}
+              marginBottom={i === entries.length - 1 ? 0 : props.gap ?? 24}
+            />
+          ))
+        : props.items.map((item, i) => (
+            <Row key={i} style={{ marginBottom: props.gap ?? 8 }}>
+              <Column width={24} style={{ verticalAlign: "top" }}>
+                <Text
+                  style={{
+                    color: palette.GOLD,
+                    fontWeight: 700,
+                    margin: 0,
+                    fontSize: 14,
+                  }}
+                >
+                  {props.icon || "✓"}
+                </Text>
+              </Column>
+              <Column style={{ verticalAlign: "top" }}>
+                <div
+                  style={{
+                    color: palette.INK,
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    margin: 0,
+                  }}
+                  dangerouslySetInnerHTML={{
+                    __html: renderRichText(resolveVariables(item, context)),
+                  }}
+                />
+              </Column>
+            </Row>
+          ))}
+    </Section>
+  )
+}
 
 const BlockButton = ({
   props,
@@ -1195,7 +1342,302 @@ const BlockPricing = ({ props, context, palette }: { props: PricingProps; contex
   )
 }
 
-const BlockProduct = ({ props, context, palette }: { props: ProductProps; context: EmailContext; palette: EmailPalette }) => (
+/** Imagen de producto con alto fijo y recorte (o placeholder). */
+const ProductImage = ({
+  src,
+  alt,
+  context,
+  palette,
+  height,
+  radius,
+}: {
+  src?: string
+  alt: string
+  context: EmailContext
+  palette: EmailPalette
+  height: number
+  radius: number
+}) =>
+  src ? (
+    <Img
+      src={resolveVariables(src, context)}
+      alt={alt}
+      width="100%"
+      height={height}
+      style={{ width: "100%", display: "block", borderRadius: radius, height, objectFit: "cover" }}
+    />
+  ) : (
+    <Text style={{ color: palette.CREAM_DIM, fontSize: 12, margin: 0 }}>(Imagen)</Text>
+  )
+
+/** Botón de los diseños de producto (estilo react.email). */
+const ProductButton = ({
+  label,
+  href,
+  context,
+  style,
+}: {
+  label?: string
+  href?: string
+  context: EmailContext
+  style?: React.CSSProperties
+}) =>
+  label ? (
+    <Button
+      href={resolveVariables(href || "", context)}
+      style={{
+        backgroundColor: "#4f46e5",
+        color: "#ffffff",
+        borderRadius: 8,
+        padding: "12px 24px",
+        fontSize: 16,
+        fontWeight: 600,
+        display: "inline-block",
+        textAlign: "center",
+        ...style,
+      }}
+    >
+      {label}
+    </Button>
+  ) : null
+
+/** "One product": imagen ancha arriba y el texto centrado debajo. */
+const BlockProductHero = ({ props, context, palette }: { props: ProductProps; context: EmailContext; palette: EmailPalette }) => {
+  const accent = props.accentColor || palette.GOLD
+  const height = props.imageHeight && props.imageHeight > 0 ? props.imageHeight : 320
+  const radius = props.radius ?? 12
+  return (
+    <Section
+      style={{
+        textAlign: props.align || "center",
+        ...blockSpacing(props),
+        ...(props.backgroundColor ? { backgroundColor: props.backgroundColor } : {}),
+      }}
+    >
+      <ProductImage src={props.imageUrl} alt={props.name} context={context} palette={palette} height={height} radius={radius} />
+      {props.eyebrow ? (
+        <Text style={{ color: accent, fontSize: 18, fontWeight: 600, lineHeight: "28px", margin: "16px 0 0" }}>
+          {resolveVariables(props.eyebrow, context)}
+        </Text>
+      ) : null}
+      <Text style={{ color: palette.DARK, fontSize: 36, fontWeight: 600, lineHeight: "40px", letterSpacing: 0.4, margin: "8px 0 0" }}>
+        {resolveVariables(props.name, context)}
+      </Text>
+      {props.description ? (
+        <Text style={{ color: palette.INK, fontSize: 16, lineHeight: "24px", margin: "8px 0 0" }}>
+          {resolveVariables(props.description, context)}
+        </Text>
+      ) : null}
+      {props.price ? (
+        <Text style={{ color: palette.DARK, fontSize: 16, fontWeight: 600, lineHeight: "24px", margin: "8px 0 0" }}>
+          {resolveVariables(props.price, context)}
+        </Text>
+      ) : null}
+      <ProductButton label={props.ctaLabel} href={props.ctaHref} context={context} style={{ backgroundColor: accent, marginTop: 16 }} />
+    </Section>
+  )
+}
+
+/** Imagen a la izquierda (50%) y ficha del producto a la derecha. */
+const BlockProductImageLeft = ({ props, context, palette }: { props: ProductProps; context: EmailContext; palette: EmailPalette }) => {
+  const accent = props.accentColor || palette.GOLD
+  const height = props.imageHeight && props.imageHeight > 0 ? props.imageHeight : 220
+  const radius = props.radius ?? 8
+  return (
+    <Section
+      style={{
+        ...blockSpacing(props),
+        ...(props.backgroundColor ? { backgroundColor: props.backgroundColor } : {}),
+      }}
+    >
+      <Row>
+        <Column width="50%" style={{ width: "50%", verticalAlign: "top", paddingRight: 32, boxSizing: "border-box" }}>
+          <ProductImage src={props.imageUrl} alt={props.name} context={context} palette={palette} height={height} radius={radius} />
+        </Column>
+        <Column width="50%" style={{ width: "50%", verticalAlign: "baseline" }}>
+          <Text style={{ color: palette.DARK, fontSize: 20, fontWeight: 600, lineHeight: "28px", margin: "8px 0 0" }}>
+            {resolveVariables(props.name, context)}
+          </Text>
+          {props.description ? (
+            <Text style={{ color: palette.INK, fontSize: 16, lineHeight: "24px", margin: "8px 0 0" }}>
+              {resolveVariables(props.description, context)}
+            </Text>
+          ) : null}
+          {props.price ? (
+            <Text style={{ color: palette.DARK, fontSize: 18, fontWeight: 600, lineHeight: "28px", margin: "8px 0 0" }}>
+              {resolveVariables(props.price, context)}
+            </Text>
+          ) : null}
+          <ProductButton
+            label={props.ctaLabel}
+            href={props.ctaHref}
+            context={context}
+            style={{ backgroundColor: accent, width: "75%", boxSizing: "border-box", padding: "12px 16px", marginTop: 16 }}
+          />
+        </Column>
+      </Row>
+    </Section>
+  )
+}
+
+/** Filas de tarjetas: encabezado opcional + 2/3/4 tarjetas (4 = 2×2 con Hr). */
+const BlockProductGrid = ({ props, context, palette }: { props: ProductProps; context: EmailContext; palette: EmailPalette }) => {
+  const items = props.products || []
+  const cols = props.columns === 3 ? 3 : props.columns === 4 ? 4 : 2
+  const perRow = cols === 4 ? 2 : cols
+  const gutter = cols === 3 ? 4 : 8
+  const accent = props.accentColor || palette.GOLD
+  const radius = props.radius ?? 8
+  const height = props.imageHeight && props.imageHeight > 0 ? props.imageHeight : cols === 3 ? 180 : 250
+  const card = (item: ProductItem) => (
+    <>
+      <ProductImage src={item.imageUrl} alt={item.name} context={context} palette={palette} height={height} radius={radius} />
+      <Text style={{ color: palette.DARK, fontSize: 20, fontWeight: 600, lineHeight: "28px", margin: "24px 0 0" }}>
+        {resolveVariables(item.name, context)}
+      </Text>
+      {item.description ? (
+        <Text style={{ color: palette.INK, fontSize: 16, lineHeight: "24px", margin: "16px 0 0" }}>
+          {resolveVariables(item.description, context)}
+        </Text>
+      ) : null}
+      {item.price ? (
+        <Text style={{ color: palette.DARK, fontSize: 16, fontWeight: 600, lineHeight: "24px", margin: "8px 0 0" }}>
+          {resolveVariables(item.price, context)}
+        </Text>
+      ) : null}
+      <ProductButton label={item.ctaLabel} href={item.ctaHref} context={context} style={{ backgroundColor: accent, marginTop: 16 }} />
+    </>
+  )
+  const rows = chunk(items, perRow)
+  return (
+    <Section
+      style={{
+        textAlign: props.align || "left",
+        ...blockSpacing(props),
+        ...(props.backgroundColor ? { backgroundColor: props.backgroundColor } : {}),
+      }}
+    >
+      {props.heading || props.subheading ? (
+        <Section style={{ paddingBottom: 16 }}>
+          {props.heading ? (
+            <Text style={{ color: palette.DARK, fontSize: 20, fontWeight: 600, lineHeight: "28px", margin: 0 }}>
+              {resolveVariables(props.heading, context)}
+            </Text>
+          ) : null}
+          {props.subheading ? (
+            <Text style={{ color: palette.INK, fontSize: 16, lineHeight: "24px", margin: "8px 0 0" }}>
+              {resolveVariables(props.subheading, context)}
+            </Text>
+          ) : null}
+        </Section>
+      ) : null}
+      {rows.map((row, ri) => (
+        <Section key={ri}>
+          <Row>
+            {row.map((item, ci) => (
+              <Column
+                key={item.id}
+                width={`${Math.round((100 / perRow) * 100) / 100}%`}
+                style={{
+                  width: `${Math.round((100 / perRow) * 100) / 100}%`,
+                  verticalAlign: "top",
+                  paddingTop: 16,
+                  paddingBottom: 16,
+                  ...(ci === 0 ? {} : { paddingLeft: gutter }),
+                  ...(ci === row.length - 1 ? {} : { paddingRight: gutter }),
+                }}
+              >
+                {card(item)}
+              </Column>
+            ))}
+          </Row>
+          {ri === 0 && rows.length > 1 ? <Hr style={{ borderColor: "#e5e7eb", margin: "24px 0" }} /> : null}
+        </Section>
+      ))}
+    </Section>
+  )
+}
+
+/** Resumen de pedido: tabla de líneas + botón de compra full-width. */
+const BlockCheckout = ({ props, context, palette }: { props: CheckoutProps; context: EmailContext; palette: EmailPalette }) => {
+  const accent = props.accentColor || "#4f46e5"
+  const border = props.borderColor || "#e5e7eb"
+  const height = props.imageHeight && props.imageHeight > 0 ? props.imageHeight : 110
+  const radius = props.radius ?? 8
+  const cell: React.CSSProperties = { padding: "8px 0", borderBottom: `1px solid ${border}` }
+  const head: React.CSSProperties = { ...cell, color: "#6b7280", fontSize: 14, fontWeight: 600 }
+  const lines = props.lines || []
+  return (
+    <Section
+      style={{
+        textAlign: props.align || "center",
+        ...blockSpacing(props),
+        ...(props.backgroundColor ? { backgroundColor: props.backgroundColor } : {}),
+      }}
+    >
+      {props.heading ? (
+        <Text style={{ color: palette.DARK, fontSize: 30, fontWeight: 600, lineHeight: "36px", margin: "0 0 16px", textAlign: "center" }}>
+          {resolveVariables(props.heading, context)}
+        </Text>
+      ) : null}
+      <Section style={{ border: `1px solid ${border}`, borderRadius: 8, padding: "0 16px 16px" }}>
+        <table width="100%" style={{ borderCollapse: "collapse", marginBottom: 16 }}>
+          <tbody>
+            <tr>
+              <th style={cell}>&nbsp;</th>
+              <th align="left" style={{ ...head, textAlign: "left" }}>
+                Producto
+              </th>
+              <th align="center" style={{ ...head, textAlign: "center" }}>
+                Cantidad
+              </th>
+              <th align="center" style={{ ...head, textAlign: "center" }}>
+                Precio
+              </th>
+            </tr>
+            {lines.map((line) => (
+              <tr key={line.id}>
+                <td style={cell}>
+                  {line.imageUrl ? (
+                    <Img
+                      src={resolveVariables(line.imageUrl, context)}
+                      alt={line.name}
+                      height={height}
+                      style={{ height, borderRadius: radius, objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    <Text style={{ color: palette.CREAM_DIM, fontSize: 12, margin: 0 }}>(Imagen)</Text>
+                  )}
+                </td>
+                <td align="left" style={cell}>
+                  <Text style={{ color: palette.DARK, fontSize: 14, margin: 0 }}>{resolveVariables(line.name, context)}</Text>
+                </td>
+                <td align="center" style={cell}>
+                  <Text style={{ color: palette.DARK, fontSize: 14, margin: 0, textAlign: "center" }}>
+                    {resolveVariables(line.quantity || "1", context)}
+                  </Text>
+                </td>
+                <td align="center" style={cell}>
+                  <Text style={{ color: palette.DARK, fontSize: 14, margin: 0, textAlign: "center" }}>
+                    {resolveVariables(line.price || "", context)}
+                  </Text>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <ProductButton
+          label={props.ctaLabel}
+          href={props.ctaHref}
+          context={context}
+          style={{ backgroundColor: accent, display: "block", width: "100%", boxSizing: "border-box", padding: "12px" }}
+        />
+      </Section>
+    </Section>
+  )
+}
+
+const BlockProductCard = ({ props, context, palette }: { props: ProductProps; context: EmailContext; palette: EmailPalette }) => (
   <Section
     style={{
       textAlign: props.align || "center",
@@ -1241,6 +1683,13 @@ const BlockProduct = ({ props, context, palette }: { props: ProductProps; contex
     ) : null}
   </Section>
 )
+
+const BlockProduct = ({ props, context, palette }: { props: ProductProps; context: EmailContext; palette: EmailPalette }) => {
+  if (props.variant === "hero") return <BlockProductHero props={props} context={context} palette={palette} />
+  if (props.variant === "image-left") return <BlockProductImageLeft props={props} context={context} palette={palette} />
+  if (props.variant === "grid") return <BlockProductGrid props={props} context={context} palette={palette} />
+  return <BlockProductCard props={props} context={context} palette={palette} />
+}
 
 const BlockTestimonial = ({ props, context, palette }: { props: TestimonialProps; context: EmailContext; palette: EmailPalette }) => (
   <Section
@@ -1397,6 +1846,7 @@ export const PREVIEW_COMPONENTS: Record<
   stats: withPreviewProps(BlockStats),
   pricing: withPreviewProps(BlockPricing),
   product: withPreviewProps(BlockProduct),
+  checkout: withPreviewProps(BlockCheckout),
   testimonial: withPreviewProps(BlockTestimonial),
   features: withPreviewProps(BlockFeatures),
   avatar: withPreviewProps(BlockAvatar),

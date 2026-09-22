@@ -479,7 +479,8 @@ export const FieldsRenderer = ({
                 >
                   <div className="ter-flex ter-items-center ter-justify-between">
                     <span className="ter-text-[11px] ter-font-semibold ter-text-muted-foreground">
-                      {field.itemLabel} {j + 1}
+                      {field.itemLabel}
+                      {field.hideIndex ? "" : ` ${j + 1}`}
                     </span>
                     <Button
                       type="button"

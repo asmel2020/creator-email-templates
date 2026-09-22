@@ -1,13 +1,14 @@
 "use client"
 
 import { type EmailBlock, type EmailPalette } from "../../core/types"
+import { newId } from "../../core/id"
 import { blockAlignMap, blockSpacing } from "../../core/blocks"
 import {
   useEmailBuilderConfig,
   useEmailBuilderStore,
 } from "../../store/email-builder-provider"
 import { InlineTextEditor } from "./inline-text-editor"
-import { Plus } from "lucide-react"
+import { Plus, X } from "lucide-react"
 import { useState, type CSSProperties, type ReactNode } from "react"
 import { getBlockView, type BlockEditableProps } from "../../block-views"
 
@@ -163,6 +164,21 @@ export const EditableText = ({ props, set, palette }: BlockEditableProps) => {
 export const EditableList = ({ props, set, palette, labels }: BlockEditableProps) => {
   const pad = blockSpacing(props)
   const [lastAdded, setLastAdded] = useState<number | null>(null)
+  const entries = (props.entries || []) as {
+    id: string
+    title: string
+    description?: string
+    number?: string
+    image?: string
+    href?: string
+    linkLabel?: string
+  }[]
+  const withImage = props.variant === "with-image"
+  const isEntryVariant = props.variant === "numbered" || withImage
+  const accent = (props.accentColor as string) || palette.GOLD
+  const radius = typeof props.radius === "number" ? props.radius : 4
+  const imageHeight = typeof props.imageHeight === "number" ? props.imageHeight : 168
+  const entryGap = typeof props.gap === "number" ? props.gap : 24
 
   const addItem = (i: number) => {
     const items = [...(props.items as string[])]
@@ -175,6 +191,156 @@ export const EditableList = ({ props, set, palette, labels }: BlockEditableProps
     set({ items })
     const focusIdx = Math.max(0, Math.min(i - 1, items.length - 1))
     setLastAdded(items.length > 0 ? focusIdx : null)
+  }
+
+  const updateEntry = (i: number, patch: Record<string, unknown>) =>
+    set({ entries: entries.map((e, j) => (j === i ? { ...e, ...patch } : e)) })
+  const addEntry = (i: number) => {
+    const next = [...entries]
+    next.splice(i + 1, 0, { id: newId(), title: "", description: "" })
+    set({ entries: next })
+    setLastAdded(i + 1)
+  }
+  const removeEntry = (i: number) => {
+    const next = entries.filter((_, j) => j !== i)
+    set({ entries: next })
+    setLastAdded(next.length > 0 ? Math.max(0, Math.min(i - 1, next.length - 1)) : null)
+  }
+
+  if (isEntryVariant) {
+    return (
+      <div
+        style={{
+          ...pad,
+          ...(props.backgroundColor ? { backgroundColor: props.backgroundColor } : {}),
+        }}
+      >
+        {entries.map((entry, i) => {
+          const badge = (
+            <div
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 9999,
+                backgroundColor: accent,
+                color: "#ffffff",
+                fontSize: 12,
+                fontWeight: 600,
+                lineHeight: "24px",
+                textAlign: "center",
+                flexShrink: 0,
+              }}
+            >
+              {entry.number && entry.number.trim() !== "" ? entry.number : i + 1}
+            </div>
+          )
+          return (
+            <div
+              key={entry.id}
+              style={{
+                display: "flex",
+                gap: 18,
+                alignItems: "flex-start",
+                marginBottom: i === entries.length - 1 ? 0 : entryGap,
+              }}
+            >
+            {withImage && (
+              <div style={{ width: "40%", flexShrink: 0, paddingRight: 24 }}>
+                {entry.image ? (
+                  <img
+                    src={entry.image}
+                    alt={entry.title}
+                    style={{
+                      width: "100%",
+                      height: imageHeight,
+                      borderRadius: radius,
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      height: imageHeight,
+                      borderRadius: radius,
+                      border: "1px dashed #c9c0ae",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: palette.CREAM_DIM,
+                      fontSize: 12,
+                    }}
+                  >
+                    Imagen
+                  </div>
+                )}
+              </div>
+            )}
+            {!withImage && <div style={{ flexShrink: 0, paddingTop: 2 }}>{badge}</div>}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <InlineTextEditor
+                value={entry.title}
+                onChange={(v) => updateEntry(i, { title: v })}
+                onDeleteWhenEmpty={() => removeEntry(i)}
+                autoFocus={i === lastAdded}
+                placeholder="Título del paso"
+                style={{
+                  color: palette.DARK,
+                  fontSize: 18,
+                  fontWeight: 700,
+                  lineHeight: 1.4,
+                  minHeight: 22,
+                }}
+              />
+              <InlineTextEditor
+                rich
+                value={entry.description || ""}
+                onChange={(v) => updateEntry(i, { description: v })}
+                placeholder="Describe el paso o beneficio"
+                style={{
+                  color: palette.INK,
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                  minHeight: 18,
+                  marginTop: 2,
+                }}
+              />
+              {entry.href && (
+                <span
+                  style={{
+                    display: "block",
+                    color: accent,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    marginTop: 12,
+                  }}
+                >
+                  {entry.linkLabel || "Aprender más →"}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              title="Quitar paso"
+              onClick={() => removeEntry(i)}
+              className="ter-text-muted-foreground ter-transition-colors ter-hover:text-destructive"
+            >
+              <X className="ter-h-3.5 ter-w-3.5" />
+            </button>
+          </div>
+          )
+        })}
+
+        <button
+          type="button"
+          onClick={() => addEntry(entries.length - 1)}
+          className="ter-mt-1 ter-flex ter-items-center ter-gap-1 ter-text-xs ter-text-muted-foreground ter-transition-colors ter-hover:text-[#a98a1e]"
+        >
+          <Plus className="ter-h-3.5 ter-w-3.5" />
+          {labels.addListItem}
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -843,7 +1009,310 @@ export const EditablePricing = ({ props, palette }: BlockEditableProps) => {
   )
 }
 
-export const EditableProduct = ({ props, palette }: BlockEditableProps) => (
+/** Imagen de producto en el canvas (o placeholder con alto fijo). */
+const ProductThumb = ({
+  src,
+  palette,
+  height,
+  radius,
+}: {
+  src?: string
+  palette: EmailPalette
+  height: number
+  radius: number
+}) =>
+  src ? (
+    <img
+      src={src}
+      alt=""
+      style={{ width: "100%", height, borderRadius: radius, objectFit: "cover", display: "block" }}
+    />
+  ) : (
+    <div
+      style={{
+        height,
+        borderRadius: radius,
+        border: "1px dashed #c9c0ae",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: palette.CREAM_DIM,
+        fontSize: 12,
+      }}
+    >
+      Imagen
+    </div>
+  )
+
+const ProductCta = ({
+  label,
+  accent,
+  style,
+}: {
+  label?: string
+  accent: string
+  style?: CSSProperties
+}) =>
+  label ? (
+    <span
+      style={{
+        display: "inline-block",
+        backgroundColor: accent,
+        color: "#ffffff",
+        borderRadius: 8,
+        padding: "12px 24px",
+        fontSize: 16,
+        fontWeight: 600,
+        textAlign: "center",
+        ...style,
+      }}
+    >
+      {label}
+    </span>
+  ) : null
+
+const EditableProductHero = ({
+  props,
+  palette,
+}: Pick<BlockEditableProps, "props" | "palette">) => {
+  const accent = (props.accentColor as string) || palette.GOLD
+  const height = props.imageHeight > 0 ? props.imageHeight : 320
+  const radius = typeof props.radius === "number" ? props.radius : 12
+  return (
+    <div style={surface(props, { textAlign: (props.align || "center") as never })}>
+      <ProductThumb src={props.imageUrl} palette={palette} height={height} radius={radius} />
+      {props.eyebrow ? (
+        <div style={{ color: accent, fontSize: 18, fontWeight: 600, lineHeight: 1.55, marginTop: 16 }}>
+          {props.eyebrow}
+        </div>
+      ) : null}
+      <div style={{ color: palette.DARK, fontSize: 36, fontWeight: 600, lineHeight: 1.11, letterSpacing: 0.4, marginTop: 8 }}>
+        {props.name}
+      </div>
+      {props.description ? (
+        <div style={{ color: palette.INK, fontSize: 16, lineHeight: 1.5, marginTop: 8 }}>{props.description}</div>
+      ) : null}
+      {props.price ? (
+        <div style={{ color: palette.DARK, fontSize: 16, fontWeight: 600, lineHeight: 1.5, marginTop: 8 }}>{props.price}</div>
+      ) : null}
+      <div style={{ marginTop: 16 }}>
+        <ProductCta label={props.ctaLabel} accent={accent} />
+      </div>
+    </div>
+  )
+}
+
+const EditableProductImageLeft = ({
+  props,
+  palette,
+}: Pick<BlockEditableProps, "props" | "palette">) => {
+  const accent = (props.accentColor as string) || palette.GOLD
+  const height = props.imageHeight > 0 ? props.imageHeight : 220
+  const radius = typeof props.radius === "number" ? props.radius : 8
+  return (
+    <div style={blockSpacing(props)}>
+      <div style={{ display: "flex", alignItems: "flex-start" }}>
+        <div style={{ width: "50%", paddingRight: 32, boxSizing: "border-box" }}>
+          <ProductThumb src={props.imageUrl} palette={palette} height={height} radius={radius} />
+        </div>
+        <div style={{ width: "50%" }}>
+          <div style={{ color: palette.DARK, fontSize: 20, fontWeight: 600, lineHeight: 1.4, marginTop: 8 }}>
+            {props.name}
+          </div>
+          {props.description ? (
+            <div style={{ color: palette.INK, fontSize: 16, lineHeight: 1.5, marginTop: 8 }}>{props.description}</div>
+          ) : null}
+          {props.price ? (
+            <div style={{ color: palette.DARK, fontSize: 18, fontWeight: 600, lineHeight: 1.55, marginTop: 8 }}>
+              {props.price}
+            </div>
+          ) : null}
+          <div style={{ marginTop: 16 }}>
+            <ProductCta
+              label={props.ctaLabel}
+              accent={accent}
+              style={{ width: "75%", boxSizing: "border-box", padding: "12px 16px" }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const EditableProductGrid = ({
+  props,
+  palette,
+}: Pick<BlockEditableProps, "props" | "palette">) => {
+  const items = (props.products || []) as {
+    id: string
+    imageUrl?: string
+    name: string
+    description?: string
+    price?: string
+    ctaLabel?: string
+  }[]
+  const cols = props.columns === 3 ? 3 : props.columns === 4 ? 4 : 2
+  const perRow = cols === 4 ? 2 : cols
+  const gutter = cols === 3 ? 4 : 8
+  const accent = (props.accentColor as string) || palette.GOLD
+  const radius = typeof props.radius === "number" ? props.radius : 8
+  const height = props.imageHeight > 0 ? props.imageHeight : cols === 3 ? 180 : 250
+  const rows = chunkItems(items, perRow)
+  return (
+    <div style={surface(props, { textAlign: (props.align || "left") as never })}>
+      {props.heading || props.subheading ? (
+        <div style={{ paddingBottom: 16 }}>
+          {props.heading ? (
+            <div style={{ color: palette.DARK, fontSize: 20, fontWeight: 600, lineHeight: 1.4 }}>{props.heading}</div>
+          ) : null}
+          {props.subheading ? (
+            <div style={{ color: palette.INK, fontSize: 16, lineHeight: 1.5, marginTop: 8 }}>{props.subheading}</div>
+          ) : null}
+        </div>
+      ) : null}
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {rows.map((row, ri) => (
+          <div key={ri}>
+            <div style={{ display: "flex" }}>
+              {row.map((item, ci) => (
+                <div
+                  key={item.id}
+                  style={{
+                    width: `${Math.round((100 / perRow) * 100) / 100}%`,
+                    paddingTop: 16,
+                    paddingBottom: 16,
+                    ...(ci === 0 ? {} : { paddingLeft: gutter }),
+                    ...(ci === row.length - 1 ? {} : { paddingRight: gutter }),
+                  }}
+                >
+                  <ProductThumb src={item.imageUrl} palette={palette} height={height} radius={radius} />
+                  <div style={{ color: palette.DARK, fontSize: 20, fontWeight: 600, lineHeight: 1.4, marginTop: 24 }}>
+                    {item.name}
+                  </div>
+                  {item.description ? (
+                    <div style={{ color: palette.INK, fontSize: 16, lineHeight: 1.5, marginTop: 16 }}>
+                      {item.description}
+                    </div>
+                  ) : null}
+                  {item.price ? (
+                    <div style={{ color: palette.DARK, fontSize: 16, fontWeight: 600, lineHeight: 1.5, marginTop: 8 }}>
+                      {item.price}
+                    </div>
+                  ) : null}
+                  <div style={{ marginTop: 16 }}>
+                    <ProductCta label={item.ctaLabel} accent={accent} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {ri === 0 && rows.length > 1 ? (
+              <div style={{ borderTop: "1px solid #e5e7eb", margin: "24px 0" }} />
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export const EditableCheckout = ({ props, palette }: BlockEditableProps) => {
+  const accent = (props.accentColor as string) || "#4f46e5"
+  const border = (props.borderColor as string) || "#e5e7eb"
+  const height = props.imageHeight > 0 ? props.imageHeight : 110
+  const radius = typeof props.radius === "number" ? props.radius : 8
+  const lines = (props.lines || []) as {
+    id: string
+    imageUrl?: string
+    name: string
+    quantity?: string
+    price?: string
+  }[]
+  const cell: CSSProperties = { padding: "8px 0", borderBottom: `1px solid ${border}` }
+  const head: CSSProperties = { ...cell, color: "#6b7280", fontSize: 14, fontWeight: 600 }
+  return (
+    <div style={surface(props, { textAlign: (props.align || "center") as never })}>
+      {props.heading ? (
+        <div style={{ color: palette.DARK, fontSize: 30, fontWeight: 600, lineHeight: 1.2, marginBottom: 16 }}>
+          {props.heading}
+        </div>
+      ) : null}
+      <div style={{ border: `1px solid ${border}`, borderRadius: 8, padding: "0 16px 16px", textAlign: "left" }}>
+        <table width="100%" style={{ borderCollapse: "collapse", marginBottom: 16 }}>
+          <tbody>
+            <tr>
+              <th style={cell}>&nbsp;</th>
+              <th align="left" style={{ ...head, textAlign: "left" }}>
+                Producto
+              </th>
+              <th align="center" style={{ ...head, textAlign: "center" }}>
+                Cantidad
+              </th>
+              <th align="center" style={{ ...head, textAlign: "center" }}>
+                Precio
+              </th>
+            </tr>
+            {lines.map((line) => (
+              <tr key={line.id}>
+                <td style={cell}>
+                  {line.imageUrl ? (
+                    <img
+                      src={line.imageUrl}
+                      alt={line.name}
+                      style={{ height, borderRadius: radius, objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 80,
+                        height,
+                        borderRadius: radius,
+                        border: "1px dashed #c9c0ae",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: palette.CREAM_DIM,
+                        fontSize: 12,
+                      }}
+                    >
+                      Imagen
+                    </div>
+                  )}
+                </td>
+                <td align="left" style={cell}>
+                  <div style={{ color: palette.DARK, fontSize: 14 }}>{line.name}</div>
+                </td>
+                <td align="center" style={cell}>
+                  <div style={{ color: palette.DARK, fontSize: 14, textAlign: "center" }}>{line.quantity || "1"}</div>
+                </td>
+                <td align="center" style={cell}>
+                  <div style={{ color: palette.DARK, fontSize: 14, textAlign: "center" }}>{line.price || ""}</div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <ProductCta
+          label={props.ctaLabel}
+          accent={accent}
+          style={{ display: "block", width: "100%", boxSizing: "border-box", padding: "12px" }}
+        />
+      </div>
+    </div>
+  )
+}
+
+export const EditableProduct = ({ props, palette }: BlockEditableProps) => {
+  if (props.variant === "hero") return <EditableProductHero props={props} palette={palette} />
+  if (props.variant === "image-left") return <EditableProductImageLeft props={props} palette={palette} />
+  if (props.variant === "grid") return <EditableProductGrid props={props} palette={palette} />
+  return <EditableProductCard props={props} palette={palette} />
+}
+
+const EditableProductCard = ({
+  props,
+  palette,
+}: Pick<BlockEditableProps, "props" | "palette">) => (
   <div style={surface(props, { textAlign: (props.align || "center") as never })}>
     {props.imageUrl ? (
       <img

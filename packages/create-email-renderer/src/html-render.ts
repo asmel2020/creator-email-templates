@@ -14,6 +14,7 @@ import type {
   BlockCommonProps,
   ButtonProps,
   CodeProps,
+  CheckoutProps,
   ColumnsProps,
   ColumnDef,
   ContainerProps,
@@ -35,7 +36,9 @@ import type {
   ImageProps,
   LinkProps,
   ListProps,
+  ListEntry,
   PricingProps,
+  ProductItem,
   ProductProps,
   QuoteProps,
   SocialProps,
@@ -229,17 +232,77 @@ const renderText = (
     `<div style="${styleToString({ color: props.color || palette.INK, fontSize: props.size || 15, lineHeight: 1.6, margin: 0 })}">${renderRichText(resolveVariables(props.text, context))}</div>`,
   );
 
+/** Badge circular con el número de la fila (24px, como react.email). */
+const listBadge = (label: string, accent: string): string =>
+  `<table role="presentation" border="0" cellpadding="0" cellspacing="0"><tbody><tr><td width="24" height="24" align="center" valign="middle" style="${styleToString({ width: 24, height: 24, borderRadius: 9999, backgroundColor: accent, color: "#ffffff", fontSize: 12, fontWeight: 600, lineHeight: 1, textAlign: "center" })}">${escapeHtml(label)}</td></tr></tbody></table>`;
+
+/** Fila de `numbered` / `with-image`: badge + título + descripción (+ imagen/enlace). */
+const renderListEntry = (
+  entry: ListEntry,
+  index: number,
+  context: EmailContext,
+  palette: EmailPalette,
+  opts: { accent: string; radius: number; imageHeight: number; withImage: boolean },
+): string => {
+  const badge = listBadge(
+    entry.number && entry.number.trim() !== ""
+      ? entry.number
+      : String(index + 1),
+    opts.accent,
+  );
+  const title = `<div style="${styleToString({ color: palette.DARK, fontSize: 18, fontWeight: 700, lineHeight: 1.4, margin: "0 0 4px" })}">${renderRichText(resolveVariables(entry.title, context))}</div>`;
+  const description = entry.description
+    ? `<div style="${styleToString({ color: palette.INK, fontSize: 13, lineHeight: 1.5, margin: 0 })}">${renderRichText(resolveVariables(entry.description, context))}</div>`
+    : "";
+  const link = entry.href
+    ? `<a href="${escapeHtml(resolveVariables(entry.href, context))}" target="_blank" style="${styleToString({ color: opts.accent, fontSize: 14, fontWeight: 600, textDecoration: "none", display: "block", marginTop: 12 })}">${escapeHtml(entry.linkLabel || "Aprender más →")}</a>`
+    : "";
+  const table = (cells: string): string =>
+    `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr>${cells}</tr></tbody></table>`;
+  if (!opts.withImage) {
+    // Badge en su propia celda a la izquierda del texto.
+    return table(
+      `<td width="24" valign="top" style="width:24px;padding-right:18px;">${badge}</td><td valign="top">${title}${description}${link}</td>`,
+    );
+  }
+  // `with-image` va sin número: imagen a la izquierda y texto a la derecha.
+  const image = entry.image
+    ? `<img src="${escapeHtml(resolveVariables(entry.image, context))}" alt="${escapeHtml(entry.title)}" width="100%" height="${opts.imageHeight}" style="${styleToString({ width: "100%", maxWidth: "100%", display: "block", border: 0, borderRadius: opts.radius, height: opts.imageHeight, objectFit: "cover", objectPosition: "center" })}" />`
+    : text("(Imagen)", { color: palette.CREAM_DIM, fontSize: 12, margin: 0 });
+  return table(
+    `<td width="40%" valign="top" style="width:40%;padding-right:24px;">${image}</td><td width="60%" valign="top" style="width:60%;padding-right:24px;">${title}${description}${link}</td>`,
+  );
+};
+
 const renderList = (
   props: ListProps,
   context: EmailContext,
   palette: EmailPalette,
 ): string => {
-  const items = props.items
-    .map(
-      (item) =>
-        `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px;"><tbody><tr><td width="24" valign="top">${text(escapeHtml(props.icon || "✓"), { color: palette.GOLD, fontWeight: 700, margin: 0, fontSize: 14 })}</td><td valign="top"><div style="${styleToString({ color: palette.INK, fontSize: 14, lineHeight: 1.5, margin: 0 })}">${renderRichText(resolveVariables(item, context))}</div></td></tr></tbody></table>`,
-    )
-    .join("");
+  const accent = props.accentColor || palette.GOLD;
+  let content: string;
+  if (props.variant === "numbered" || props.variant === "with-image") {
+    const gap = props.gap ?? 24;
+    content = (props.entries || [])
+      .map(
+        (entry, i) =>
+          `<div style="${styleToString({ marginBottom: i === (props.entries || []).length - 1 ? 0 : gap })}">${renderListEntry(entry, i, context, palette, {
+            accent,
+            radius: props.radius ?? 4,
+            imageHeight: props.imageHeight ?? 168,
+            withImage: props.variant === "with-image",
+          })}</div>`,
+      )
+      .join("");
+  } else {
+    const gap = props.gap ?? 8;
+    content = props.items
+      .map(
+        (item) =>
+          `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:${gap}px;"><tbody><tr><td width="24" valign="top">${text(escapeHtml(props.icon || "✓"), { color: palette.GOLD, fontWeight: 700, margin: 0, fontSize: 14 })}</td><td valign="top"><div style="${styleToString({ color: palette.INK, fontSize: 14, lineHeight: 1.5, margin: 0 })}">${renderRichText(resolveVariables(item, context))}</div></td></tr></tbody></table>`,
+      )
+      .join("");
+  }
   return section(
     {
       ...blockSpacing(props),
@@ -247,7 +310,7 @@ const renderList = (
         ? { backgroundColor: props.backgroundColor }
         : {}),
     },
-    items,
+    content,
   );
 };
 
@@ -804,13 +867,39 @@ const renderPricing = (
   return renderPricingCard(props, context, palette);
 };
 
-const renderProduct = (
+/** Botón de los diseños de `product` / `checkout` (estilo react.email). */
+const productButton = (
+  label: string,
+  href: string,
+  context: EmailContext,
+  style: Record<string, string | number | undefined>,
+): string =>
+  `<a href="${escapeHtml(resolveVariables(href, context))}" target="_blank" style="${styleToString({ backgroundColor: "#4f46e5", color: "#ffffff", borderRadius: 8, padding: "12px 24px", fontSize: 16, fontWeight: 600, textDecoration: "none", display: "inline-block", textAlign: "center", ...style })}">${escapeHtml(resolveVariables(label, context))}</a>`;
+
+/** Imagen de producto con alto fijo y recorte (o placeholder). */
+const productImage = (
+  src: string | undefined,
+  alt: string,
+  context: EmailContext,
+  palette: EmailPalette,
+  opts: { height: number; radius: number; width?: number },
+): string =>
+  src
+    ? `<img src="${escapeHtml(resolveVariables(src, context))}" alt="${escapeHtml(alt)}" width="100%" height="${opts.height}" style="${styleToString({ width: "100%", maxWidth: "100%", display: "block", border: 0, borderRadius: opts.radius, height: opts.height, objectFit: "cover" })}" />`
+    : text("(Imagen)", {
+        color: palette.CREAM_DIM,
+        fontSize: 12,
+        margin: 0,
+      });
+
+/** Tarjeta clásica: imagen centrada + nombre + descripción + precio + CTA. */
+const renderProductCard = (
   props: ProductProps,
   context: EmailContext,
   palette: EmailPalette,
 ): string => {
   const image = props.imageUrl
-    ? `<img src="${escapeHtml(resolveVariables(props.imageUrl, context))}" alt="${escapeHtml(props.name)}" width="360" style="max-width:100%;display:block;border:0;border-radius:8px;margin:0 auto 16px;" />`
+    ? `<img src="${escapeHtml(resolveVariables(props.imageUrl, context))}" alt="${escapeHtml(props.name)}" width="360" style="max-width:100%;display:block;border:0;border-radius:${props.radius ?? 8}px;margin:0 auto 16px;" />`
     : "";
   const name = `<div style="${styleToString({ color: palette.DARK, fontSize: 22, fontWeight: 700, margin: "0 0 8px" })}">${renderRichText(resolveVariables(props.name, context))}</div>`;
   const desc = props.description
@@ -827,6 +916,231 @@ const renderProduct = (
       ...bgStyle(props),
     },
     image + name + desc + price + cta,
+  );
+};
+
+/** "One product": imagen ancha arriba y el texto centrado debajo. */
+const renderProductHero = (
+  props: ProductProps,
+  context: EmailContext,
+  palette: EmailPalette,
+): string => {
+  const accent = props.accentColor || palette.GOLD;
+  const height = props.imageHeight && props.imageHeight > 0 ? props.imageHeight : 320;
+  const radius = props.radius ?? 12;
+  const image = productImage(props.imageUrl, props.name, context, palette, {
+    height,
+    radius,
+  });
+  const eyebrow = props.eyebrow
+    ? `<div style="${styleToString({ color: accent, fontSize: 18, fontWeight: 600, lineHeight: 1.55, margin: "16px 0 0" })}">${renderRichText(resolveVariables(props.eyebrow, context))}</div>`
+    : "";
+  const name = `<div style="${styleToString({ color: palette.DARK, fontSize: 36, fontWeight: 600, lineHeight: 1.11, letterSpacing: "0.4px", margin: "8px 0 0" })}">${renderRichText(resolveVariables(props.name, context))}</div>`;
+  const desc = props.description
+    ? `<div style="${styleToString({ color: palette.INK, fontSize: 16, lineHeight: 1.5, margin: "8px 0 0" })}">${renderRichText(resolveVariables(props.description, context))}</div>`
+    : "";
+  const price = props.price
+    ? `<div style="${styleToString({ color: palette.DARK, fontSize: 16, fontWeight: 600, lineHeight: 1.5, margin: "8px 0 0" })}">${renderRichText(resolveVariables(props.price, context))}</div>`
+    : "";
+  const cta = props.ctaLabel
+    ? productButton(props.ctaLabel, props.ctaHref, context, {
+        backgroundColor: accent,
+        marginTop: 16,
+      })
+    : "";
+  return section(
+    {
+      textAlign: alignMap[props.align || "center"],
+      ...blockSpacing(props),
+      ...bgStyle(props),
+    },
+    image + eyebrow + name + desc + price + cta,
+  );
+};
+
+/** Imagen a la izquierda (50%) y ficha del producto a la derecha. */
+const renderProductImageLeft = (
+  props: ProductProps,
+  context: EmailContext,
+  palette: EmailPalette,
+): string => {
+  const accent = props.accentColor || palette.GOLD;
+  const height = props.imageHeight && props.imageHeight > 0 ? props.imageHeight : 220;
+  const radius = props.radius ?? 8;
+  const image = productImage(props.imageUrl, props.name, context, palette, {
+    height,
+    radius,
+  });
+  const name = `<div style="${styleToString({ color: palette.DARK, fontSize: 20, fontWeight: 600, lineHeight: 1.4, margin: "8px 0 0" })}">${renderRichText(resolveVariables(props.name, context))}</div>`;
+  const desc = props.description
+    ? `<div style="${styleToString({ color: palette.INK, fontSize: 16, lineHeight: 1.5, margin: "8px 0 0" })}">${renderRichText(resolveVariables(props.description, context))}</div>`
+    : "";
+  const price = props.price
+    ? `<div style="${styleToString({ color: palette.DARK, fontSize: 18, fontWeight: 600, lineHeight: 1.55, margin: "8px 0 0" })}">${renderRichText(resolveVariables(props.price, context))}</div>`
+    : "";
+  const cta = props.ctaLabel
+    ? productButton(props.ctaLabel, props.ctaHref, context, {
+        backgroundColor: accent,
+        width: "75%",
+        display: "block",
+        boxSizing: "border-box",
+        marginTop: 16,
+        padding: "12px 16px",
+      })
+    : "";
+  return section(
+    {
+      ...blockSpacing(props),
+      ...bgStyle(props),
+    },
+    `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td width="50%" valign="top" style="width:50%;padding-right:32px;box-sizing:border-box;">${image}</td><td width="50%" valign="top" style="width:50%;vertical-align:baseline;">${name}${desc}${price}${cta}</td></tr></tbody></table>`,
+  );
+};
+
+/** Filas de tarjetas: encabezado opcional + 2/3/4 tarjetas (4 = 2×2 con Hr). */
+const renderProductGrid = (
+  props: ProductProps,
+  context: EmailContext,
+  palette: EmailPalette,
+): string => {
+  const items = props.products || [];
+  const cols = props.columns === 3 ? 3 : props.columns === 4 ? 4 : 2;
+  // Con 4 tarjetas react.email usa 2×2 con separador; con 3, una sola fila.
+  const perRow = cols === 4 ? 2 : cols;
+  const gutter = cols === 3 ? 4 : 8;
+  const accent = props.accentColor || palette.GOLD;
+  const radius = props.radius ?? 8;
+  const height =
+    props.imageHeight && props.imageHeight > 0
+      ? props.imageHeight
+      : cols === 3
+        ? 180
+        : 250;
+  const card = (item: ProductItem): string => {
+    const image = productImage(item.imageUrl, item.name, context, palette, {
+      height,
+      radius,
+    });
+    const name = `<div style="${styleToString({ color: palette.DARK, fontSize: 20, fontWeight: 600, lineHeight: 1.4, margin: "24px 0 0" })}">${renderRichText(resolveVariables(item.name, context))}</div>`;
+    const desc = item.description
+      ? `<div style="${styleToString({ color: palette.INK, fontSize: 16, lineHeight: 1.5, margin: "16px 0 0" })}">${renderRichText(resolveVariables(item.description, context))}</div>`
+      : "";
+    const price = item.price
+      ? `<div style="${styleToString({ color: palette.DARK, fontSize: 16, fontWeight: 600, lineHeight: 1.5, margin: "8px 0 0" })}">${renderRichText(resolveVariables(item.price, context))}</div>`
+      : "";
+    const cta = item.ctaLabel
+      ? productButton(item.ctaLabel, item.ctaHref || "", context, {
+          backgroundColor: accent,
+          marginTop: 16,
+        })
+      : "";
+    return image + name + desc + price + cta;
+  };
+  const rows = chunkRows(items, perRow)
+    .map((row, ri) => {
+      const cells = row
+        .map((item, ci) => {
+          const first = ci === 0;
+          const last = ci === row.length - 1;
+          const padding =
+            (first ? "" : `padding-left:${gutter}px;`) +
+            (last ? "" : `padding-right:${gutter}px;`);
+          const width = String(Math.round((100 / perRow) * 100) / 100);
+          return `<td width="${width}%" valign="top" style="width:${width}%;padding-top:16px;padding-bottom:16px;${padding}">${card(item)}</td>`;
+        })
+        .join("");
+      const separator =
+        ri === 0 && chunkRows(items, perRow).length > 1
+          ? `<tr><td colspan="${row.length}" style="padding:0;"><hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" /></td></tr>`
+          : "";
+      return `<tr>${cells}</tr>${separator}`;
+    })
+    .join("");
+  const header =
+    props.heading || props.subheading
+      ? `<div style="padding-bottom:16px;">${
+          props.heading
+            ? `<div style="${styleToString({ color: palette.DARK, fontSize: 20, fontWeight: 600, lineHeight: 1.4, margin: 0 })}">${renderRichText(resolveVariables(props.heading, context))}</div>`
+            : ""
+        }${
+          props.subheading
+            ? `<div style="${styleToString({ color: palette.INK, fontSize: 16, lineHeight: 1.5, margin: "8px 0 0" })}">${renderRichText(resolveVariables(props.subheading, context))}</div>`
+            : ""
+        }</div>`
+      : "";
+  return section(
+    {
+      textAlign: alignMap[props.align || "left"],
+      ...blockSpacing(props),
+      ...bgStyle(props),
+    },
+    `${header}<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody>${rows}</tbody></table>`,
+  );
+};
+
+const renderProduct = (
+  props: ProductProps,
+  context: EmailContext,
+  palette: EmailPalette,
+): string => {
+  switch (props.variant) {
+    case "hero":
+      return renderProductHero(props, context, palette);
+    case "image-left":
+      return renderProductImageLeft(props, context, palette);
+    case "grid":
+      return renderProductGrid(props, context, palette);
+    // "card" (default) y cualquier variante desconocida.
+    default:
+      return renderProductCard(props, context, palette);
+  }
+};
+
+/** Resumen de pedido: tabla de líneas + botón de compra full-width. */
+const renderCheckout = (
+  props: CheckoutProps,
+  context: EmailContext,
+  palette: EmailPalette,
+): string => {
+  const accent = props.accentColor || "#4f46e5";
+  const border = props.borderColor || "#e5e7eb";
+  const height = props.imageHeight && props.imageHeight > 0 ? props.imageHeight : 110;
+  const radius = props.radius ?? 8;
+  const cell = `padding:8px 0;border-bottom:1px solid ${border};`;
+  const head = (label: string, align: "left" | "center"): string =>
+    `<th align="${align}" style="${cell}${styleToString({ color: "#6b7280", fontSize: 14, fontWeight: 600, textAlign: align })}">${escapeHtml(label)}</th>`;
+  const rows = (props.lines || [])
+    .map((line) => {
+      const image = line.imageUrl
+        ? `<img src="${escapeHtml(resolveVariables(line.imageUrl, context))}" alt="${escapeHtml(line.name)}" height="${height}" style="${styleToString({ height, borderRadius: radius, objectFit: "cover", border: 0, display: "block" })}" />`
+        : text("(Imagen)", { color: palette.CREAM_DIM, fontSize: 12, margin: 0 });
+      const name = `<div style="${styleToString({ color: palette.DARK, fontSize: 14, margin: 0 })}">${renderRichText(resolveVariables(line.name, context))}</div>`;
+      const qty = `<div style="${styleToString({ color: palette.DARK, fontSize: 14, margin: 0, textAlign: "center" })}">${escapeHtml(resolveVariables(line.quantity || "1", context))}</div>`;
+      const price = `<div style="${styleToString({ color: palette.DARK, fontSize: 14, margin: 0, textAlign: "center" })}">${escapeHtml(resolveVariables(line.price || "", context))}</div>`;
+      return `<tr><td style="${cell}">${image}</td><td align="left" style="${cell}">${name}</td><td align="center" style="${cell}">${qty}</td><td align="center" style="${cell}">${price}</td></tr>`;
+    })
+    .join("");
+  const table = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:16px;"><tbody><tr><th style="${cell}">&nbsp;</th>${head("Producto", "left")}${head("Cantidad", "center")}${head("Precio", "center")}</tr>${rows}</tbody></table>`;
+  const cta = props.ctaLabel
+    ? productButton(props.ctaLabel, props.ctaHref || "", context, {
+        backgroundColor: accent,
+        display: "block",
+        width: "100%",
+        boxSizing: "border-box",
+        padding: "12px",
+      })
+    : "";
+  const box = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td style="${styleToString({ border: `1px solid ${border}`, borderRadius: 8, padding: "0 16px 16px", marginTop: 16 })}">${table}${cta}</td></tr></tbody></table>`;
+  const heading = props.heading
+    ? `<div style="${styleToString({ color: palette.DARK, fontSize: 30, fontWeight: 600, lineHeight: 1.2, margin: "0 0 16px", textAlign: "center" })}">${renderRichText(resolveVariables(props.heading, context))}</div>`
+    : "";
+  return section(
+    {
+      textAlign: alignMap[props.align || "center"],
+      ...blockSpacing(props),
+      ...bgStyle(props),
+    },
+    heading + box,
   );
 };
 
@@ -987,6 +1301,7 @@ const BUILTIN_RENDERERS: Record<
   stats: renderStats,
   pricing: renderPricing,
   product: renderProduct,
+  checkout: renderCheckout,
   testimonial: renderTestimonial,
   features: renderFeatures,
   avatar: renderAvatar,

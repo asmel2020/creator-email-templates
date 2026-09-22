@@ -65,6 +65,7 @@ describe("renderEmailHtml parity snapshots", () => {
       [
         "avatar",
         "button",
+        "checkout",
         "code",
         "columns",
         "container",

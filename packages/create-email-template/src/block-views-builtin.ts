@@ -6,10 +6,13 @@ import { LIST_ICONS } from "./core/types"
 import type { BlockFieldDef, BlockViewRegistration } from "./block-views"
 import { FOOTER_VARIANTS } from "./footer-presets"
 import { GALLERY_VARIANTS } from "./gallery-presets"
+import { LIST_VARIANTS } from "./list-presets"
+import { PRODUCT_VARIANTS } from "./product-presets"
 import { PRICING_VARIANTS } from "./pricing-presets"
 import {
   EditableAvatar,
   EditableButton,
+  EditableCheckout,
   EditableCode,
   EditableDivider,
   EditableFeatures,
@@ -58,7 +61,68 @@ const textFields: BlockFieldDef[] = [
 ]
 
 const listFields: BlockFieldDef[] = [
-  { kind: "icons", key: "icon", label: "Ícono", options: LIST_ICONS },
+  {
+    kind: "preset",
+    key: "variant",
+    label: "Diseño",
+    options: LIST_VARIANTS.map((v) => ({
+      value: v.value,
+      label: v.label,
+      build: v.build,
+    })),
+  },
+  {
+    kind: "group",
+    label: "Viñetas",
+    visibleWhen: { key: "variant", equals: "bullets" },
+    fields: [
+      { kind: "icons", key: "icon", label: "Ícono", options: LIST_ICONS },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Entradas",
+    visibleWhen: { key: "variant", equals: ["numbered", "with-image"] },
+    fields: [
+      {
+        kind: "repeat",
+        key: "entries",
+        label: "Pasos",
+        itemLabel: "Paso",
+        hideIndex: true,
+        fields: [
+          { kind: "text", key: "title", label: "Título" },
+          {
+            kind: "richText",
+            key: "description",
+            label: "Descripción",
+            placeholder: "Describe el paso o beneficio",
+          },
+          { kind: "text", key: "number", label: "Número (vacío = posición)" },
+          { kind: "image", key: "image" },
+          { kind: "text", key: "href", label: "Enlace (opcional)" },
+          { kind: "text", key: "linkLabel", label: "Texto del enlace" },
+        ],
+      },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Estilo",
+    visibleWhen: { key: "variant", equals: ["numbered", "with-image"] },
+    fields: [
+      { kind: "color", key: "accentColor", label: "Color del badge", fallback: "#d7b227" },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Imagen",
+    visibleWhen: { key: "variant", equals: "with-image" },
+    fields: [
+      { kind: "number", key: "radius", label: "Borde redondeado (px)", default: 4 },
+      { kind: "number", key: "imageHeight", label: "Alto de imagen (px)", default: 168 },
+    ],
+  },
   { kind: "color", key: "backgroundColor", label: "Color de fondo", fallback: "#ffffff" },
   { kind: "hint", labelKey: "listEditHint" },
 ]
@@ -351,6 +415,7 @@ const pricingFields: BlockFieldDef[] = [
         key: "plans",
         label: "Planes",
         itemLabel: "Plan",
+        hideIndex: true,
         fields: [
           { kind: "text", key: "title", label: "Nombre" },
           {
@@ -395,12 +460,123 @@ const pricingFields: BlockFieldDef[] = [
 ]
 
 const productFields: BlockFieldDef[] = [
-  { kind: "image", key: "imageUrl" },
-  { kind: "text", key: "name", label: "Nombre" },
-  { kind: "richText", key: "description", label: "Descripción" },
-  { kind: "text", key: "price", label: "Precio" },
+  {
+    kind: "preset",
+    key: "variant",
+    label: "Diseño",
+    options: PRODUCT_VARIANTS.map((v) => ({
+      value: v.value,
+      label: v.label,
+      build: v.build,
+    })),
+  },
+  {
+    kind: "group",
+    label: "Producto",
+    visibleWhen: { key: "variant", equals: ["card", "hero", "image-left"] },
+    fields: [
+      { kind: "image", key: "imageUrl" },
+      { kind: "text", key: "name", label: "Nombre" },
+      { kind: "richText", key: "description", label: "Descripción" },
+      { kind: "text", key: "price", label: "Precio" },
+      { kind: "text", key: "eyebrow", label: "Línea superior (destacado)" },
+      { kind: "text", key: "ctaLabel", label: "Texto del botón" },
+      { kind: "text", key: "ctaHref", label: "Enlace del botón" },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Encabezado",
+    visibleWhen: { key: "variant", equals: "grid" },
+    fields: [
+      { kind: "text", key: "heading", label: "Título de sección" },
+      { kind: "text", key: "subheading", label: "Bajada" },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Tarjetas",
+    visibleWhen: { key: "variant", equals: "grid" },
+    fields: [
+      {
+        kind: "repeat",
+        key: "products",
+        label: "Productos",
+        itemLabel: "Producto",
+        hideIndex: true,
+        fields: [
+          { kind: "image", key: "imageUrl" },
+          { kind: "text", key: "name", label: "Nombre" },
+          { kind: "richText", key: "description", label: "Descripción" },
+          { kind: "text", key: "price", label: "Precio" },
+          { kind: "text", key: "ctaLabel", label: "Texto del botón" },
+          { kind: "text", key: "ctaHref", label: "Enlace del botón" },
+        ],
+      },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Cuadrícula",
+    visibleWhen: { key: "variant", equals: "grid" },
+    fields: [
+      {
+        kind: "select",
+        key: "columns",
+        label: "Tarjetas por fila",
+        options: [
+          { value: 2, label: "2 tarjetas" },
+          { value: 3, label: "3 tarjetas" },
+          { value: 4, label: "4 tarjetas (2×2)" },
+        ],
+      },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Estilo",
+    fields: [
+      { kind: "color", key: "accentColor", label: "Color de acento", fallback: "#d7b227" },
+      { kind: "number", key: "radius", label: "Borde redondeado (px)", default: 8 },
+      {
+        kind: "number",
+        key: "imageHeight",
+        label: "Alto de imagen (px, 0 = auto)",
+        default: 0,
+      },
+    ],
+  },
+  { kind: "align", key: "align", label: "Alineación" },
+  { kind: "color", key: "backgroundColor", label: "Color de fondo", fallback: "#ffffff" },
+]
+
+const checkoutFields: BlockFieldDef[] = [
+  { kind: "text", key: "heading", label: "Título" },
+  {
+    kind: "repeat",
+    key: "lines",
+    label: "Líneas del pedido",
+    itemLabel: "Línea",
+    hideIndex: true,
+    fields: [
+      { kind: "image", key: "imageUrl" },
+      { kind: "text", key: "name", label: "Producto" },
+      { kind: "text", key: "quantity", label: "Cantidad" },
+      { kind: "text", key: "price", label: "Precio" },
+    ],
+  },
   { kind: "text", key: "ctaLabel", label: "Texto del botón" },
   { kind: "text", key: "ctaHref", label: "Enlace del botón" },
+  {
+    kind: "group",
+    label: "Estilo",
+    fields: [
+      { kind: "color", key: "accentColor", label: "Color del botón", fallback: "#4f46e5" },
+      { kind: "color", key: "borderColor", label: "Color del borde", fallback: "#e5e7eb" },
+      { kind: "number", key: "radius", label: "Borde de la imagen (px)", default: 8 },
+      { kind: "number", key: "imageHeight", label: "Alto de la imagen (px)", default: 110 },
+    ],
+  },
   { kind: "align", key: "align", label: "Alineación" },
   { kind: "color", key: "backgroundColor", label: "Color de fondo", fallback: "#ffffff" },
 ]
@@ -481,6 +657,7 @@ export const BUILTIN_EDITABLES: Record<
   stats: EditableStats,
   pricing: EditablePricing,
   product: EditableProduct,
+  checkout: EditableCheckout,
   testimonial: EditableTestimonial,
   features: EditableFeatures,
   avatar: EditableAvatar,
@@ -508,6 +685,7 @@ export const BUILTIN_FIELDS: Record<string, BlockFieldDef[]> = {
   stats: statsFields,
   pricing: pricingFields,
   product: productFields,
+  checkout: checkoutFields,
   testimonial: testimonialFields,
   features: featuresFields,
   avatar: avatarFields,

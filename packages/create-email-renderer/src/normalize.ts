@@ -167,6 +167,28 @@ const RECORD_ARRAY_FIELDS: Record<
   links: { label: "string", href: "string", icon: "string" },
   images: { src: "string", alt: "string", href: "string" },
   stats: { value: "string", label: "string" },
+  products: {
+    imageUrl: "string",
+    name: "string",
+    description: "string",
+    price: "string",
+    ctaLabel: "string",
+    ctaHref: "string",
+  },
+  lines: {
+    imageUrl: "string",
+    name: "string",
+    quantity: "string",
+    price: "string",
+  },
+  entries: {
+    title: "string",
+    description: "string",
+    number: "string",
+    image: "string",
+    href: "string",
+    linkLabel: "string",
+  },
   features: { icon: "string", title: "string", description: "string" },
   plans: {
     title: "string",

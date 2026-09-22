@@ -24,7 +24,8 @@ export type EmailBlockType =
   | "features"
   | "avatar"
   | "code"
-  | "link";
+  | "link"
+  | "checkout";
 
 /**
  * Profundidad máxima de anidamiento. 1 = un bloque puede contener hijos, pero
@@ -88,9 +89,39 @@ export interface TextProps extends BlockCommonProps {
   color?: string;
 }
 
+/**
+ * Estilos de la lista (patrones de react.email/components/list):
+ * `bullets` viñetas simples, `numbered` badge numerado + título + descripción,
+ * `with-image` imagen a la izquierda con badge, título, descripción y enlace.
+ */
+export type ListVariant = "bullets" | "numbered" | "with-image";
+
+export interface ListEntry {
+  id: string;
+  title: string;
+  description?: string;
+  /** Texto del badge circular; vacío = número de la posición. */
+  number?: string;
+  /** Imagen de la fila (solo variante `with-image`). */
+  image?: string;
+  href?: string;
+  linkLabel?: string;
+}
+
 export interface ListProps extends BlockCommonProps {
+  /** Viñetas de la variante `bullets` (la clásica). */
   items: string[];
   icon?: string;
+  /** Estilo de la lista (default `"bullets"` = la de siempre). */
+  variant?: ListVariant;
+  /** Filas de las variantes `numbered` / `with-image`. */
+  entries?: ListEntry[];
+  /** Color del badge numerado (y del enlace "Learn more"). */
+  accentColor?: string;
+  /** Borde redondeado de la imagen en px (default 4). */
+  radius?: number;
+  /** Alto de la imagen en px (default 168). */
+  imageHeight?: number;
 }
 
 export const LIST_ICONS = [
@@ -290,6 +321,24 @@ export interface PricingProps extends BlockCommonProps {
   footnote?: string;
 }
 
+/**
+ * Diseños del bloque `product` (patrones de react.email/components/ecommerce):
+ * `card` la tarjeta de siempre, `hero` imagen ancha arriba con el texto centrado,
+ * `image-left` imagen 50% a la izquierda y `grid` fila(s) de tarjetas.
+ */
+export type ProductVariant = "card" | "hero" | "image-left" | "grid";
+
+/** Tarjeta del diseño `grid` de `product`. */
+export interface ProductItem {
+  id: string;
+  imageUrl?: string;
+  name: string;
+  description?: string;
+  price?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+}
+
 export interface ProductProps extends BlockCommonProps {
   imageUrl?: string;
   name: string;
@@ -297,6 +346,48 @@ export interface ProductProps extends BlockCommonProps {
   price: string;
   ctaLabel: string;
   ctaHref: string;
+  /** Diseño del bloque (default `"card"` = la tarjeta de siempre). */
+  variant?: ProductVariant;
+  /** Línea superior del diseño `hero` (p. ej. "Relojes clásicos"). */
+  eyebrow?: string;
+  /** Título de sección de `grid`. */
+  heading?: string;
+  /** Bajada del título de sección de `grid`. */
+  subheading?: string;
+  /** Tarjetas del diseño `grid`. */
+  products?: ProductItem[];
+  /** Tarjetas por fila del diseño `grid` (2, 3 o 4). */
+  columns?: number;
+  /** Alto de cada imagen en px (hero 320 · grid 180/250). */
+  imageHeight?: number;
+  /** Borde redondeado de las imágenes en px (hero 12 · resto 8). */
+  radius?: number;
+  /** Color del eyebrow, el precio y el botón. */
+  accentColor?: string;
+}
+
+/** Línea de pedido del bloque `checkout`. */
+export interface CheckoutLine {
+  id: string;
+  imageUrl?: string;
+  name: string;
+  quantity?: string;
+  price?: string;
+}
+
+export interface CheckoutProps extends BlockCommonProps {
+  heading?: string;
+  lines: CheckoutLine[];
+  ctaLabel?: string;
+  ctaHref?: string;
+  /** Alto de la miniatura de cada línea (default 110). */
+  imageHeight?: number;
+  /** Borde redondeado de la miniatura (default 8). */
+  radius?: number;
+  /** Color del botón de compra (default `#4f46e5`). */
+  accentColor?: string;
+  /** Color del borde de la caja y de las líneas de la tabla. */
+  borderColor?: string;
 }
 
 export interface TestimonialProps extends BlockCommonProps {
@@ -365,7 +456,8 @@ export type EmailBlockProps =
   | FeaturesProps
   | AvatarProps
   | CodeProps
-  | LinkProps;
+  | LinkProps
+  | CheckoutProps;
 
 export interface EmailBlock {
   id: string;

@@ -30,6 +30,7 @@ const SPACING_TYPES = new Set([
   "stats",
   "pricing",
   "product",
+  "checkout",
   "testimonial",
   "features",
   "avatar",
