@@ -8,12 +8,19 @@ import type {
   EmailBlockProps,
   EmailContext,
   EmailPalette,
+  EmailSettings,
 } from "./types.js";
 
 export interface BlockRenderInput<P = EmailBlockProps> {
   props: P;
   context: EmailContext;
   palette: EmailPalette;
+  /**
+   * Ajustes globales del correo (puede ser parcial). El bloque `downloads` lee
+   * de aquí la lista de archivos subidos en Ajustes (`settings.files`); el resto
+   * de bloques lo ignoran.
+   */
+  settings?: Partial<EmailSettings>;
 }
 
 export type BlockRenderHtml<P = EmailBlockProps> = (

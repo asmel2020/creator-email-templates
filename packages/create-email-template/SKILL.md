@@ -66,7 +66,7 @@ consumidor debe importarlo explícitamente; sin él, el editor se ve sin estilos
 | `Canvas` / `SortableCanvas` | Lienzo con drag & drop. |
 | `EditableBlockRenderer` | Render editable de un bloque concreto. |
 | `PropertiesPanel` | Panel de propiedades schema-driven. |
-| `InlineTextEditor`, `SelectionToolbar`, `VariablesInfoDialog` | Piezas internas reutilizables. |
+| `InlineTextEditor`, `SelectionToolbar`, `VariablesInfoDialog`, `SettingsDialog` | Piezas internas reutilizables (el dialog de Ajustes gestiona tipografía, fondo y archivos). |
 
 ### Hooks (siempre dentro de `<EmailBuilderProvider>`)
 
@@ -88,8 +88,34 @@ Acciones: `addBlock(type, index?, location?)`, `removeBlock`, `duplicateBlock`,
 ### Provider (`EmailBuilderConfig`)
 
 `variables`, `variableSections`, `blockLibrary`, `blockDefaults`, `palette`, `defaultSettings`,
-`sampleContext`, `labels`, `historyLimit` (default 50). `autosave` recibe
-`{ onSave, intervalMs (10s), enabled, onSaved }` y `uploadImage` sirve para subir imágenes.
+`sampleContext`, `files`, `labels`, `historyLimit` (default 50). `autosave` recibe
+`{ onSave, intervalMs (10s), enabled, onSaved }`; `uploadImage` sube imágenes y `uploadFile`
+sube documentos (PDF, DOC, XLS…).
+
+### Archivos descargables (`uploadFile` + `settings.files`)
+
+El usuario sube archivos en **Ajustes** (el engranaje del lienzo). Quedan en
+`settings.files` del payload y el bloque `downloads` los lista en el correo:
+
+```tsx
+<EmailBuilderProvider
+  uploadFile={async (file) => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/uploads", { method: "POST", body: form });
+    const { url } = await res.json();
+    return url; // URL PÚBLICA: el destinatario la descarga y tu backend la adjunta
+  }}
+  config={{ files: { maxSizeMb: 10, maxCount: 10, warnTotalMb: 5 } }} // opcional
+>
+```
+
+- Cada archivo lleva dos interruptores: **Adjuntar** (`attach`, lo resuelve tu ESP al enviar) y
+  **Enlace** (`link`, aparece en el bloque `downloads`). Defaults: `link: true`, `attach: false`.
+- Sin `uploadFile`, la demo usa `URL.createObjectURL` (blob local): sirve para previsualizar,
+  **no** para un correo real.
+- Tu backend lee los adjuntos del payload:
+  `settings.files.filter((f) => f.attach).map((f) => ({ filename: f.name, path: f.url }))`.
 
 ## Flujos típicos
 
@@ -143,3 +169,5 @@ await saveNow();
 | Estilos raros en tu app | Un selector del CSS de la lib no está scopeado (`check:css-scope` lo vigila). |
 | El canvas muestra una versión vieja | Caché del dev server: borra `node_modules/.vite` y reinicia. |
 | `dirty` no baja | Solo `markSaved()` (autosave o manual) lo limpia. |
+| El bloque de descargas no muestra nada | No hay archivos en Ajustes con el interruptor **Enlace** activo. |
+| El archivo no llega adjunto | El HTML no adjunta: tu backend debe leer `settings.files` con `attach: true`. |

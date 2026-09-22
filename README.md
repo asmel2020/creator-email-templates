@@ -24,7 +24,8 @@ Ambas librerías comparten el mismo core, por lo que **el preview del editor y e
 
 ## Características
 
-- 🧱 **12 tipos de bloque**: header, hero, heading, text, list, button, image, quote, columns, divider, spacer, footer — todos con estilos email-safe (tablas + inline).
+- 🧱 **26 bloques built-in** (header, hero, heading, text, list, button, image, quote, columns, container, grid, divider, spacer, footer, social, gallery, stats, pricing, product, checkout, downloads, testimonial, features, avatar, code, link) con variantes en varios de ellos — todos con estilos email-safe (tablas + inline).
+- 📎 **Archivos descargables y adjuntos**: sube PDF/DOC/XLS en Ajustes, el bloque `downloads` los lista y tu backend adjunta los marcados con `attach`.
 - ✍️ **Edición inline enriquecida** (negrita, cursiva, enlaces) directamente en el canvas, con drag & drop (`@dnd-kit`).
 - 🏷️ **Variables** `{firstName}` con resolución en preview y en el HTML final.
 - 💾 **Autoguardado integrado** (opt-in, default cada 10s) con estado reactivo y guardado manual vía `saveNow()`.
@@ -74,7 +75,8 @@ export function EditorPage() {
         },
         sampleContext: { firstName: "Danny", registerUrl: "https://mi-sitio.com/registro" },
       }}
-      uploadImage={async (file) => subirAS3(file)}          // opcional
+      uploadImage={async (file) => subirAS3(file)}          // opcional: imágenes
+      uploadFile={async (file) => subirAS3(file)}           // opcional: PDF, DOC, XLS…
       autosave={{                                            // opcional (default 10s)
         onSave: async (payload) => {
           const res = await fetch("/api/templates/1", {
@@ -170,7 +172,8 @@ app.put("/templates/:id", async (c) => {
 | Deshacer | Ctrl/Cmd+Z (incluido) · `useEmailBuilderStore((s) => s.undo)` |
 | Renderizar a HTML | `renderTemplateEmail({ subject, payload, context })` |
 | Bloques crudos → HTML | `renderEmailHtml({ blocks, settings, palette })` |
-| Validar/normalizar JSON | `normalizeBlocks` / `normalizeSettings` / `parseTemplatePayload` |
+| Validar/normalizar JSON | `normalizeBlocks` / `normalizeSettings` / `normalizeFiles` / `parseTemplatePayload` |
+| Archivos descargables/adjuntos | `settings.files` + bloque `downloads` (+ `uploadFile` en el editor) |
 
 Referencia completa de parámetros, tipos y ciclo de vida: **[AGENTS.md](./AGENTS.md)**.
 

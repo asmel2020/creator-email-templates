@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS: EmailSettings = {
   cardBorderWidth: 1,
   cardBorderRadius: 4,
   fontFamily: DEFAULT_FONT_STACK,
+  files: [],
 }
 
 export const DEFAULT_BLOCK_LIBRARY: BlockDefinition[] = [
@@ -503,6 +504,25 @@ export const DEFAULT_BLOCK_LIBRARY: BlockDefinition[] = [
       paddingY: 8,
       paddingX: 32,
       color: "#a98a1e",
+    },
+  },
+  {
+    type: "downloads",
+    label: "Archivos / Descargas",
+    description: "Lista los archivos subidos en Ajustes (PDF, DOC, XLS…)",
+    defaultProps: {
+      heading: "Recursos descargables",
+      subheading: "",
+      buttonLabel: "Descargar",
+      accentColor: "#d7b227",
+      borderColor: "#e3dccb",
+      showSize: true,
+      showIcon: true,
+      radius: 8,
+      emptyText: "",
+      align: "left",
+      paddingY: 16,
+      paddingX: 32,
     },
   },
 ]

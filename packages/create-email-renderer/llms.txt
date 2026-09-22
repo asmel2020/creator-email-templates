@@ -4,7 +4,7 @@
 
 ## Docs
 - [SKILL.md](./SKILL.md): orientation for agents — mental model, flows, recipes, golden rules.
-- [docs/BLOCKS.md](./docs/BLOCKS.md): catalog of the 25 built-in blocks (props, defaults, variants, examples).
+- [docs/BLOCKS.md](./docs/BLOCKS.md): catalog of the 26 built-in blocks (props, defaults, variants, examples).
 - [docs/MCP.md](./docs/MCP.md): how to expose this package as an MCP server (tools + code).
 - [README.md](./README.md): public API reference (renderTemplateEmail, blockJson, tracking, typography).
 
@@ -12,4 +12,6 @@
 - `renderTemplateEmail({ subject, payload, context, settings, tracking })` -> `{ html, subject }`
 - `blockJson(type, props?)` / `templateJson(blocks, settings?)` -> build a payload in code
 - `parseTemplatePayload(raw)` -> `{ content, settings }` (never throws)
+- `settings.files: EmailFileAttachment[]` -> downloads (`downloads` block) and real attachments (`attach: true`, resolved by your ESP)
+- `normalizeFiles(input)` -> repairs a file list (ids, names, sizes, scheme whitelist)
 - Subpaths: /server /html-render /build /normalize /types /variables /richtext /default-blocks /registry

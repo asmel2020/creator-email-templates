@@ -4,6 +4,12 @@ import { type EmailBlock, type EmailPalette } from "../../core/types"
 import { newId } from "../../core/id"
 import { blockAlignMap, blockSpacing } from "../../core/blocks"
 import {
+  FILE_KIND_LABELS,
+  fileKind,
+  formatBytes,
+} from "../../core/types"
+import { isSafeFileUrl } from "../../core/richtext"
+import {
   useEmailBuilderConfig,
   useEmailBuilderStore,
 } from "../../store/email-builder-provider"
@@ -1490,6 +1496,134 @@ export const EditableLink = ({ props, palette }: BlockEditableProps) => (
     </span>
   </div>
 )
+
+/**
+ * Lista de archivos descargables. Los archivos NO se editan aquí: se suben en
+ * Ajustes (`settings.files`); el lienzo solo replica el diseño final.
+ */
+export const EditableDownloads = ({
+  props,
+  palette,
+  labels,
+}: BlockEditableProps) => {
+  const settingsFiles = useEmailBuilderStore((s) => s.settings.files)
+  const accent = props.accentColor || palette.GOLD
+  const border = props.borderColor || "#e3dccb"
+  const files = (settingsFiles ?? []).filter(
+    (file) => file.link !== false && isSafeFileUrl(file.url),
+  )
+  const emptyText = props.emptyText || ""
+  const cell: CSSProperties = {
+    padding: "10px 0",
+    borderBottom: `1px solid ${border}`,
+    verticalAlign: "middle",
+  }
+
+  if (files.length === 0 && !emptyText) {
+    return (
+      <div style={surface(props)}>
+        <div
+          style={{
+            border: `1px dashed ${border}`,
+            borderRadius: props.radius ?? 8,
+            padding: "12px 16px",
+            color: palette.CREAM_DIM,
+            fontSize: 13,
+          }}
+        >
+          {labels.downloadsHint}
+        </div>
+      </div>
+    )
+  }
+
+  // En el lienzo el enlace es texto (no navega): se parece al del correo.
+  const download = (label: string): ReactNode => (
+    <span style={{ color: accent, fontSize: 14, fontWeight: 600, textDecoration: "underline" }}>
+      {label}
+    </span>
+  )
+
+  return (
+    <div style={surface(props)}>
+      {(props.heading || props.subheading) && (
+        <div style={{ marginBottom: 12 }}>
+          {props.heading && (
+            <div style={{ color: palette.DARK, fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
+              {props.heading}
+            </div>
+          )}
+          {props.subheading && (
+            <div style={{ color: palette.CREAM_DIM, fontSize: 14, marginTop: 6 }}>
+              {props.subheading}
+            </div>
+          )}
+        </div>
+      )}
+      <div
+        style={{
+          border: `1px solid ${border}`,
+          borderRadius: props.radius ?? 8,
+          padding: "4px 16px",
+        }}
+      >
+        {files.length === 0 ? (
+          <div style={{ color: palette.CREAM_DIM, fontSize: 14, padding: "10px 0" }}>
+            {emptyText}
+          </div>
+        ) : (
+          <table width="100%" style={{ borderCollapse: "collapse" }}>
+            <tbody>
+              {files.map((file) => (
+                <tr key={file.id}>
+                  {props.showIcon !== false && (
+                    <td width="46" style={cell}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          minWidth: 38,
+                          padding: "3px 6px",
+                          borderRadius: 6,
+                          backgroundColor: "#f1e8dc",
+                          color: accent,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textAlign: "center",
+                        }}
+                      >
+                        {FILE_KIND_LABELS[fileKind(file.name || file.url, file.mimeType)]}
+                      </span>
+                    </td>
+                  )}
+                  <td style={cell}>
+                    <div
+                      style={{
+                        color: palette.DARK,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {file.name || "archivo"}
+                    </div>
+                    {props.showSize !== false && formatBytes(file.size) && (
+                      <div style={{ color: palette.CREAM_DIM, fontSize: 12, marginTop: 2 }}>
+                        {formatBytes(file.size)}
+                      </div>
+                    )}
+                  </td>
+                  <td align="right" style={{ ...cell, whiteSpace: "nowrap" }}>
+                    {download(props.buttonLabel || "Descargar")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export const EditableBlockRenderer = ({ block }: Props) => {
   const config = useEmailBuilderConfig()

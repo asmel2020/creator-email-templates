@@ -66,6 +66,7 @@ export const useEmailBuilder = () => {
     sampleContext: config.sampleContext,
     labels: config.labels,
     uploadImage: config.uploadImage,
+    uploadFile: config.uploadFile,
 
     blocks,
     selectedId,

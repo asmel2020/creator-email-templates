@@ -47,7 +47,8 @@ export function EditorPage() {
 ```tsx
 <EmailBuilderProvider
   config={{ /* opciones del builder (todas opcionales) */ }}
-  uploadImage={fnUpload}   // opcional: subida de imágenes
+  uploadImage={fnUpload}       // opcional: subida de imágenes
+  uploadFile={fnUploadFile}    // opcional: subida de documentos (PDF, DOC, XLS…)
   autosave={{ /* opcional: autoguardado */ }}
 >
 ```
@@ -57,9 +58,10 @@ export function EditorPage() {
 | Opción | Tipo | Default | Qué hace |
 |---|---|---|---|
 | `blockDefaults` | `Partial<Record<Bloque, Partial<Props>>>` | — | Valores iniciales por tipo de bloque. Se aplican **al arrastrar** el bloque al canvas. |
-| `blockLibrary` | `BlockDefinition[]` | `DEFAULT_BLOCK_LIBRARY` (12 bloques) | Qué bloques aparecen en la palette y con qué defaultProps. |
+| `blockLibrary` | `BlockDefinition[]` | `DEFAULT_BLOCK_LIBRARY` (26 bloques) | Qué bloques aparecen en la palette y con qué defaultProps. |
 | `palette` | `Partial<EmailPalette>` | `DEFAULT_PALETTE` | Colores base del tema: `INK` (texto), `DARK` (fondos oscuros), `GOLD` (acentos), `CREAM_DIM` (texto secundario). |
-| `defaultSettings` | `Partial<EmailSettings>` | `DEFAULT_SETTINGS` | Fondo de página, grosor y redondeo del borde de la tarjeta. |
+| `defaultSettings` | `Partial<EmailSettings>` | `DEFAULT_SETTINGS` | Fondo de página, grosor/redondeo del borde, tipografía y **archivos** (`files`). |
+| `files` | `Partial<EmailBuilderFileOptions>` | `{ accept, maxSizeMb: 10, maxCount: 10, warnTotalMb: 5 }` | Límites y formatos aceptados al subir archivos en Ajustes. |
 | `variables` | `EmailVariable[]` | `DEFAULT_VARIABLES` | Etiquetas `{key}` disponibles para el usuario. |
 | `variableSections` | `EmailVariableSection[]` | agrupación única | Agrupa las variables por categoría en el dialog "Etiquetas disponibles". |
 | `sampleContext` | `EmailContext` | `SAMPLE_CONTEXT` | Datos de ejemplo: al previsualizar, `{firstName}` se ve como el valor de aquí. |
@@ -104,24 +106,20 @@ export function EditorPage() {
 >
 ```
 
-#### Bloques disponibles y sus props
+#### Bloques disponibles
 
-Todos los bloques aceptan `align` ("left" | "center" | "right"), `backgroundColor`, `paddingY` y `paddingX`.
+**26 bloques**: `header`, `hero`, `heading`, `text`, `list`, `button`, `image`, `quote`,
+`columns`, `container`, `grid`, `divider`, `spacer`, `footer`, `social`, `gallery`, `stats`,
+`pricing`, `product`, `checkout`, `downloads`, `testimonial`, `features`, `avatar`, `code` y
+`link`. Muchos tienen **variantes** (`list`, `footer`, `pricing`, `gallery`, `product`).
 
-| Tipo | Props específicas |
-|---|---|
-| `header` | `brandName`, `tagline?`, `logoUrl?` |
-| `hero` | `title`, `subtitle?`, `imageUrl?` |
-| `heading` | `text`, `size?`, `color?` |
-| `text` | `text`, `size?`, `color?` |
-| `list` | `items: string[]`, `icon?` ("✓", "•", "→"…) |
-| `button` | `label`, `href` (acepta variables), `backgroundColor?`, `color?`, `blockBackgroundColor?` |
-| `image` | `src`, `alt?`, `width?`, `href?` (si hay `href`, la imagen es clicable) |
-| `quote` | `text`, `author?`, `borderColor?`, `borderWidth?`, `marginLeft?` |
-| `columns` | `columns: { id: string; text: string }[]` |
-| `divider` | `color?`, `height?` |
-| `spacer` | `height?`, `backgroundColor?` |
-| `footer` | `text?`, `brandName?`, `backgroundColor?` |
+Todos aceptan `align`, `backgroundColor`, `paddingY`/`paddingX` (+ overrides por lado),
+`marginTop`/`marginBottom` y `gap`.
+
+📖 Props, defaults, variantes y ejemplos de cada uno: el catálogo del core,
+[`create-email-renderer/docs/BLOCKS.md`](../create-email-renderer/docs/BLOCKS.md) (desde npm:
+`node_modules/create-email-renderer/docs/BLOCKS.md`). Es la **única fuente de verdad** y viaja
+con el paquete del renderer.
 
 ### `uploadImage`
 
@@ -136,6 +134,43 @@ uploadImage={async (file: File) => {
   return url; // esta URL queda en la prop `src` del bloque image
 }}
 ```
+
+### `uploadFile`
+
+Se invoca cuando el usuario sube un documento desde **Ajustes** (el engranaje del lienzo). Recibe
+el `File` y debe devolver la **URL pública** donde quedó alojado: el destinatario la usa para
+descargar y tu backend para adjuntarlo al enviar.
+
+```tsx
+uploadFile={async (file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/api/uploads", { method: "POST", body: form });
+  const { url } = await res.json();
+  return url; // URL pública (R2, S3, tu API…)
+}}
+```
+
+Los archivos quedan en `settings.files` del payload y el bloque **`downloads`** los lista en el
+correo. Cada archivo tiene dos interruptores:
+
+| Interruptor | Campo | Para qué |
+|---|---|---|
+| **Adjuntar** | `attach` | Que tu ESP lo adjunte al enviar (el HTML no adjunta nada). |
+| **Enlace** | `link` | Que aparezca en el bloque `downloads` (default `true`). |
+
+Contrato del backend:
+
+```ts
+const { content, settings } = parseTemplatePayload(template.payload);
+const attachments = settings.files
+  .filter((f) => f.attach)
+  .map((f) => ({ filename: f.name, path: f.url })); // p. ej. Resend/SES
+const { html, subject } = await renderTemplateEmail({ subject, payload: template.payload, context });
+```
+
+> Sin `uploadFile` la librería usa `URL.createObjectURL` (blob local) para que puedas probar el
+> editor: sirve para previsualizar, **no** para un correo real.
 
 ---
 

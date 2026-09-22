@@ -1,6 +1,6 @@
 import { createStore } from "./vanilla-store"
 import { newId } from "../core/id"
-import { normalizeBlocks } from "../core/normalize"
+import { normalizeBlocks, normalizeSettings } from "../core/normalize"
 import {
   createBlock,
   type EmailBlock,
@@ -123,7 +123,7 @@ export const createEmailBuilderStore = (
       blocks: [],
       selectedId: null,
       propertiesOpen: false,
-      settings: { ...config.defaultSettings },
+      settings: normalizeSettings(config.defaultSettings),
       dirty: false,
       past: [],
 
@@ -132,7 +132,7 @@ export const createEmailBuilderStore = (
           // Normaliza el payload externo (BD/import) contra la blockLibrary
           // resuelta: completa props faltantes y descarta tipos desconocidos.
           blocks: normalizeBlocks(data.blocks, config.blockLibrary),
-          settings: { ...get().settings, ...data.settings },
+          settings: normalizeSettings({ ...get().settings, ...data.settings }),
           selectedId: null,
           propertiesOpen: false,
           dirty: false,

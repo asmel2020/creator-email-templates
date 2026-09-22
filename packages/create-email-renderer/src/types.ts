@@ -25,7 +25,8 @@ export type EmailBlockType =
   | "avatar"
   | "code"
   | "link"
-  | "checkout";
+  | "checkout"
+  | "downloads";
 
 /**
  * Profundidad máxima de anidamiento. 1 = un bloque puede contener hijos, pero
@@ -390,6 +391,127 @@ export interface CheckoutProps extends BlockCommonProps {
   borderColor?: string;
 }
 
+/**
+ * Archivo subido en Ajustes (`settings.files`), no en un bloque: se sube una
+ * vez y el bloque `downloads` lo lista donde lo pongas.
+ *
+ * `url` debe ser una URL **pública** (R2/S3/tu API) para que el destinatario
+ * pueda descargarlo o tu backend adjuntarlo; los `blob:` del navegador y los
+ * `data:` gigantes solo sirven para previsualizar.
+ */
+export interface EmailFileAttachment {
+  id: string;
+  url: string;
+  name: string;
+  /** Tamaño en bytes (informativo: se muestra junto al nombre). */
+  size?: number;
+  /** MIME real del archivo (informativo: elige el ícono). */
+  mimeType?: string;
+  /** Adjuntar el archivo al correo (lo resuelve tu backend/ESP). */
+  attach?: boolean;
+  /** Mostrar enlace de descarga en el bloque `downloads` (default `true`). */
+  link?: boolean;
+}
+
+/** Familias de archivo (ícono/etiqueta) del bloque `downloads`. */
+export type FileKind = "pdf" | "doc" | "sheet" | "slides" | "zip" | "image" | "file";
+
+/** Etiqueta corta por familia (badge del bloque `downloads`). */
+export const FILE_KIND_LABELS: Record<FileKind, string> = {
+  pdf: "PDF",
+  doc: "DOC",
+  sheet: "XLS",
+  slides: "PPT",
+  zip: "ZIP",
+  image: "IMG",
+  file: "FILE",
+};
+
+const FILE_KIND_BY_EXTENSION: Record<string, FileKind> = {
+  pdf: "pdf",
+  doc: "doc",
+  docx: "doc",
+  odt: "doc",
+  rtf: "doc",
+  txt: "doc",
+  xls: "sheet",
+  xlsx: "sheet",
+  csv: "sheet",
+  ods: "sheet",
+  ppt: "slides",
+  pptx: "slides",
+  odp: "slides",
+  zip: "zip",
+  rar: "zip",
+  "7z": "zip",
+  gz: "zip",
+  tar: "zip",
+  png: "image",
+  jpg: "image",
+  jpeg: "image",
+  gif: "image",
+  webp: "image",
+  avif: "image",
+  svg: "image",
+  bmp: "image",
+};
+
+const KIND_BY_MIME_PREFIX: [string, FileKind][] = [
+  ["image/", "image"],
+  ["application/pdf", "pdf"],
+  ["application/zip", "zip"],
+  ["application/x-zip", "zip"],
+  ["application/x-rar", "zip"],
+  ["application/msword", "doc"],
+  ["application/vnd.openxmlformats-officedocument.wordprocessingml", "doc"],
+  ["application/vnd.ms-excel", "sheet"],
+  ["application/vnd.openxmlformats-officedocument.spreadsheetml", "sheet"],
+  ["text/csv", "sheet"],
+  ["application/vnd.ms-powerpoint", "slides"],
+  ["application/vnd.openxmlformats-officedocument.presentationml", "slides"],
+  ["text/", "doc"],
+];
+
+/** Familia de un archivo a partir del nombre/URL y (si hay) su MIME. */
+export const fileKind = (nameOrUrl: string, mimeType?: string): FileKind => {
+  const mime = (mimeType || "").toLowerCase().split(";")[0].trim();
+  for (const [prefix, kind] of KIND_BY_MIME_PREFIX) {
+    if (mime.startsWith(prefix)) return kind;
+  }
+  const clean = (nameOrUrl || "").split("?")[0].split("#")[0];
+  const ext = clean.includes(".") ? clean.split(".").pop()!.toLowerCase() : "";
+  return FILE_KIND_BY_EXTENSION[ext] ?? "file";
+};
+
+/** `1536` -> `"1.5 KB"`. Tolerante: valores raros devuelven `""`. */
+export const formatBytes = (bytes: unknown): string => {
+  if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes <= 0) {
+    return "";
+  }
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+export interface DownloadsProps extends BlockCommonProps {
+  heading?: string;
+  subheading?: string;
+  /** Texto del enlace de descarga (default "Descargar"). */
+  buttonLabel?: string;
+  /** Color del enlace y del badge (default `#d7b227`). */
+  accentColor?: string;
+  /** Color del borde de la caja y de las filas. */
+  borderColor?: string;
+  /** Muestra el tamaño de cada archivo (default `true`). */
+  showSize?: boolean;
+  /** Muestra el badge con el tipo de archivo (default `true`). */
+  showIcon?: boolean;
+  /** Borde redondeado de la caja (default 8). */
+  radius?: number;
+  /** Texto cuando aún no hay archivos (vacío = no pintar nada). */
+  emptyText?: string;
+}
+
 export interface TestimonialProps extends BlockCommonProps {
   avatarUrl?: string;
   quote: string;
@@ -457,7 +579,8 @@ export type EmailBlockProps =
   | AvatarProps
   | CodeProps
   | LinkProps
-  | CheckoutProps;
+  | CheckoutProps
+  | DownloadsProps;
 
 /** Props por tipo de bloque (base del tipado de `blockJson`). */
 export interface BlockPropsMap {
@@ -486,6 +609,7 @@ export interface BlockPropsMap {
   code: CodeProps;
   link: LinkProps;
   checkout: CheckoutProps;
+  downloads: DownloadsProps;
 }
 
 export interface EmailBlock {
@@ -545,6 +669,11 @@ export interface EmailSettings {
    * fuente por defecto del cliente.
    */
   fontFamily: string;
+  /**
+   * Archivos subidos en Ajustes: el bloque `downloads` los lista y tu backend
+   * los adjunta al enviar (`attach`). Nunca se descartan por estar vacío.
+   */
+  files: EmailFileAttachment[];
 }
 
 /** Fuentes seguras (de sistema) para el correo, agrupadas por estilo. */
@@ -621,6 +750,8 @@ export const EMAIL_BLOCK_TYPES: EmailBlockType[] = [
   "avatar",
   "code",
   "link",
+  "checkout",
+  "downloads",
 ];
 
 export const buildBlockMap = (

@@ -1,7 +1,8 @@
 // Serializador puro JSON -> HTML email-safe. Es el equivalente sin React de
 // EmailTemplate (blocks.tsx): mismas estructuras (tablas + estilos inline),
 // mismas variables, mismo richtext. Debe mantenerse visualmente sincronizado.
-import { escapeHtml, renderRichText } from "./richtext.js";
+import { escapeHtml, isSafeFileUrl, renderRichText } from "./richtext.js";
+import { FILE_KIND_LABELS, fileKind, formatBytes } from "./types.js";
 import {
   DEFAULT_BLOCK_LIBRARY,
   DEFAULT_PALETTE,
@@ -20,6 +21,7 @@ import type {
   ColumnDef,
   ContainerProps,
   DividerProps,
+  DownloadsProps,
   EmailBlock,
   EmailBlockProps,
   EmailBlockType,
@@ -410,6 +412,7 @@ const renderColumns = (
   props: ColumnsProps,
   context: EmailContext,
   palette: EmailPalette,
+  settings: Partial<EmailSettings>,
 ): string => {
   const gutter = props.gap ?? 8;
   const columns = props.columns || [];
@@ -417,7 +420,7 @@ const renderColumns = (
     .map((col, i) => {
       const isLast = i === columns.length - 1;
       const inner = (col.blocks || [])
-        .map((child) => renderBlock(child, context, palette))
+        .map((child) => renderBlock(child, context, palette, settings))
         .join("");
       return `<td width="50%" valign="top" style="width:50%;${
         isLast ? "" : `padding-right:${gutter}px;`
@@ -439,9 +442,10 @@ const renderContainer = (
   props: ContainerProps,
   context: EmailContext,
   palette: EmailPalette,
+  settings: Partial<EmailSettings>,
 ): string => {
   const inner = (props.blocks || [])
-    .map((child) => renderBlock(child, context, palette))
+    .map((child) => renderBlock(child, context, palette, settings))
     .join("");
   return section(
     {
@@ -514,6 +518,7 @@ const renderFooter = (
   props: FooterProps,
   context: EmailContext,
   palette: EmailPalette,
+  settings: Partial<EmailSettings>,
 ): string => {
   // "classic" (default) mantiene la barra oscura con text/brandName.
   if (!props.variant || props.variant === "classic") {
@@ -526,7 +531,13 @@ const renderFooter = (
       ...blockSpacing(props),
       ...bgStyle(props),
     },
-    renderColumnsTable(props.columns || [], props.gap ?? 12, context, palette),
+    renderColumnsTable(
+      props.columns || [],
+      props.gap ?? 12,
+      context,
+      palette,
+      settings,
+    ),
   );
 };
 
@@ -1286,12 +1297,91 @@ const renderLink = (
     ),
   );
 
+/**
+ * Lista de archivos descargables. Los archivos NO viven en el bloque: se suben
+ * una vez en Ajustes (`settings.files`) y este bloque los pinta donde lo pongas.
+ * Solo lista los marcados como enlace (`link !== false`); los que son solo
+ * adjuntos (`attach: true, link: false`) no aparecen en el HTML.
+ */
+const renderDownloads = (
+  props: DownloadsProps,
+  context: EmailContext,
+  palette: EmailPalette,
+  settings: Partial<EmailSettings>,
+): string => {
+  const accent = props.accentColor || palette.GOLD;
+  const border = props.borderColor || "#e3dccb";
+  const label = props.buttonLabel || "Descargar";
+  const files = (settings.files ?? []).filter(
+    (file) => file.link !== false && isSafeFileUrl(file.url),
+  );
+  const headingText = String(props.heading ?? "");
+  const subheadingText = String(props.subheading ?? "");
+  const emptyText = String(props.emptyText ?? "");
+
+  // Sin archivos y sin mensaje: no pintar nada (evita encabezados huérfanos).
+  if (files.length === 0 && !emptyText) return "";
+
+  const cell = `padding:10px 0;border-bottom:1px solid ${border};`;
+  const rows = files
+    .map((file) => {
+      const kind = fileKind(file.name || file.url, file.mimeType);
+      const badge =
+        props.showIcon === false
+          ? ""
+          : `<td width="46" valign="middle" style="${cell}"><span style="${styleToString({ display: "inline-block", minWidth: 38, padding: "3px 6px", borderRadius: 6, backgroundColor: "#f1e8dc", color: accent, fontSize: 11, fontWeight: 700, textAlign: "center" })}">${escapeHtml(FILE_KIND_LABELS[kind])}</span></td>`;
+      const size = props.showSize === false ? "" : formatBytes(file.size);
+      const meta = size
+        ? `<div style="${styleToString({ color: palette.CREAM_DIM, fontSize: 12, margin: "2px 0 0" })}">${escapeHtml(size)}</div>`
+        : "";
+      const name = `<div style="${styleToString({ color: palette.DARK, fontSize: 14, fontWeight: 600, margin: 0, wordBreak: "break-word" })}">${escapeHtml(file.name || "archivo")}</div>`;
+      const download = linkOrSpan(
+        resolveVariables(file.url, context),
+        styleToString({
+          color: accent,
+          fontSize: 14,
+          fontWeight: 600,
+          textDecoration: "underline",
+          whiteSpace: "nowrap",
+        }),
+        escapeHtml(label),
+      );
+      return `<tr>${badge}<td valign="middle" style="${cell}">${name}${meta}</td><td valign="middle" align="right" style="${cell}">${download}</td></tr>`;
+    })
+    .join("");
+
+  const heading = headingText
+    ? `<div style="${styleToString({ color: palette.DARK, fontSize: 20, fontWeight: 700, lineHeight: 1.3, margin: 0 })}">${renderRichText(resolveVariables(headingText, context))}</div>`
+    : "";
+  const subheading = subheadingText
+    ? `<div style="${styleToString({ color: palette.CREAM_DIM, fontSize: 14, margin: "6px 0 0" })}">${renderRichText(resolveVariables(subheadingText, context))}</div>`
+    : "";
+  const header = heading || subheading ? `<div style="margin-bottom:12px;">${heading}${subheading}</div>` : "";
+  const empty = files.length === 0
+    ? `<div style="${styleToString({ color: palette.CREAM_DIM, fontSize: 14, margin: 0 })}">${escapeHtml(emptyText)}</div>`
+    : "";
+  const table = files.length
+    ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody>${rows}</tbody></table>`
+    : "";
+  const box = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td style="${styleToString({ border: `1px solid ${border}`, borderRadius: props.radius ?? 8, padding: "4px 16px" })}">${empty}${table}</td></tr></tbody></table>`;
+
+  return section(
+    {
+      textAlign: alignMap[props.align || "left"],
+      ...blockSpacing(props),
+      ...bgStyle(props),
+    },
+    header + box,
+  );
+};
+
 /** Tabla de columnas (celdas con ancho y gutter) compartida por grid/footer. */
 const renderColumnsTable = (
   columns: ColumnDef[],
   gutter: number,
   context: EmailContext,
   palette: EmailPalette,
+  settings: Partial<EmailSettings>,
 ): string => {
   const fallbackWidth = columns.length > 0 ? 100 / columns.length : 100;
   const cells = columns
@@ -1301,7 +1391,7 @@ const renderColumnsTable = (
         Math.round((col.width ?? fallbackWidth) * 100) / 100,
       );
       const inner = (col.blocks || [])
-        .map((child) => renderBlock(child, context, palette))
+        .map((child) => renderBlock(child, context, palette, settings))
         .join("");
       return `<td width="${width}%" valign="top" style="width:${width}%;${
         isLast ? "" : `padding-right:${gutter}px;`
@@ -1315,19 +1405,25 @@ const renderGrid = (
   props: GridProps,
   context: EmailContext,
   palette: EmailPalette,
+  settings: Partial<EmailSettings>,
 ): string =>
   section(
     {
       ...blockSpacing(props),
       ...bgStyle(props),
     },
-    renderColumnsTable(props.columns || [], props.gap ?? 0, context, palette),
+    renderColumnsTable(props.columns || [], props.gap ?? 0, context, palette, settings),
   );
 
 /** Renderers built-in por tipo — se registran en el registry al importar. */
 const BUILTIN_RENDERERS: Record<
   EmailBlockType,
-  (props: never, context: EmailContext, palette: EmailPalette) => string
+  (
+    props: never,
+    context: EmailContext,
+    palette: EmailPalette,
+    settings: Partial<EmailSettings>,
+  ) => string
 > = {
   header: renderHeader,
   hero: renderHero,
@@ -1354,18 +1450,20 @@ const BUILTIN_RENDERERS: Record<
   avatar: renderAvatar,
   code: renderCode,
   link: renderLink,
+  downloads: renderDownloads,
 };
 
 for (const definition of DEFAULT_BLOCK_LIBRARY) {
   const renderer = BUILTIN_RENDERERS[definition.type];
   registerBlock({
     definition,
-    renderHtml: ({ props, context, palette }) =>
+    renderHtml: ({ props, context, palette, settings }) =>
       (renderer as (
         p: unknown,
         c: EmailContext,
         a: EmailPalette,
-      ) => string)(props, context, palette),
+        s: Partial<EmailSettings>,
+      ) => string)(props, context, palette, settings ?? {}),
   });
 }
 
@@ -1373,10 +1471,11 @@ const renderBlock = (
   block: EmailBlock,
   context: EmailContext,
   palette: EmailPalette,
+  settings: Partial<EmailSettings>,
 ): string => {
   const renderHtml = getBlockRenderHtml(block.type);
   if (!renderHtml) return "";
-  return renderHtml({ props: block.props, context, palette });
+  return renderHtml({ props: block.props, context, palette, settings });
 };
 
 /**
@@ -1403,7 +1502,7 @@ export const renderEmailHtml = async ({
 
   const resolvedSubject = resolveVariables(subject, context);
   const body = blocks
-    .map((block) => renderBlock(block, context, palette))
+    .map((block) => renderBlock(block, context, palette, settings))
     .join("");
 
   const html = `<!DOCTYPE html>

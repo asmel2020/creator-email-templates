@@ -14,12 +14,10 @@ import {
   Plus,
   Settings,
   Info,
-  X,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { VariablesInfoDialog } from "./variables-info-dialog";
-import { FONT_STACKS } from "../../core/types";
+import { SettingsDialog } from "./settings-dialog";
 
 type Device = "mobile" | "desktop";
 
@@ -40,7 +38,6 @@ export const SortableCanvas = ({
   const cardBorderWidth = useEmailBuilderStore((s) => s.settings.cardBorderWidth);
   const cardBorderRadius = useEmailBuilderStore((s) => s.settings.cardBorderRadius);
   const fontFamily = useEmailBuilderStore((s) => s.settings.fontFamily);
-  const setSettings = useEmailBuilderStore((s) => s.setSettings);
   const [device, setDevice] = useState<Device>("desktop");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -84,7 +81,7 @@ export const SortableCanvas = ({
               title={config.labels.settings}
               onClick={(e) => {
                 e.stopPropagation();
-                setSettingsOpen((o) => !o);
+                setSettingsOpen(true);
               }}
               className={cn(
                 "ter-rounded-md ter-border ter-bg-background ter-p-1.5 ter-transition-colors",
@@ -95,114 +92,6 @@ export const SortableCanvas = ({
             >
               <Settings className="ter-h-3.5 ter-w-3.5" />
             </button>
-
-            {settingsOpen && (
-              <div
-                className="ter-absolute ter-right-0 ter-top-full ter-z-40 ter-mt-1 ter-w-60 ter-rounded-lg ter-border ter-bg-card ter-p-3 ter-shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="ter-grid ter-gap-2.5">
-                  <div className="ter-flex ter-items-center ter-justify-between">
-                    <span className="ter-text-xs ter-font-semibold ter-text-muted-foreground ter-uppercase">
-                      {config.labels.settings}
-                    </span>
-                    <button
-                      type="button"
-                      title="Cerrar"
-                      onClick={() => setSettingsOpen(false)}
-                      className="ter-rounded ter-p-1 ter-text-muted-foreground ter-transition-colors ter-hover:text-foreground"
-                    >
-                      <X className="ter-h-3.5 ter-w-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="ter-grid ter-gap-1">
-                    <label className="ter-text-xs ter-font-semibold ter-text-muted-foreground ter-uppercase">
-                      {config.labels.fontFamily}
-                    </label>
-                    <select
-                      value={
-                        FONT_STACKS.some((f) => f.stack === fontFamily)
-                          ? fontFamily
-                          : "custom"
-                      }
-                      onChange={(e) => {
-                        // "custom" no cambia nada: se edita en el input de abajo.
-                        if (e.target.value === "custom") return;
-                        setSettings({ fontFamily: e.target.value });
-                      }}
-                      className="ter-h-9 ter-w-full ter-rounded-md ter-border ter-border-border ter-bg-transparent ter-px-3 ter-text-sm"
-                    >
-                      {FONT_STACKS.map((f) => (
-                        <option key={f.value} value={f.stack}>
-                          {f.label}
-                        </option>
-                      ))}
-                      <option value="custom">{config.labels.fontCustom}</option>
-                    </select>
-                    <Input
-                      value={fontFamily}
-                      placeholder="font-family: …"
-                      onChange={(e) => setSettings({ fontFamily: e.target.value })}
-                      className="ter-font-mono ter-text-xs"
-                    />
-                  </div>
-
-                  <div className="ter-grid ter-gap-1">
-                    <label className="ter-text-xs ter-font-semibold ter-text-muted-foreground ter-uppercase">
-                      {config.labels.pageBackground}
-                    </label>
-                    <div className="ter-flex ter-items-center ter-gap-2">
-                      <input
-                        type="color"
-                        value={
-                          /^#[0-9a-fA-F]{6}$/.test(pageBackground)
-                            ? pageBackground
-                            : "#f5f1e8"
-                        }
-                        onChange={(e) =>
-                          setSettings({ pageBackground: e.target.value })
-                        }
-                        className="ter-h-7 ter-w-9 ter-cursor-pointer ter-rounded ter-border-0 ter-bg-transparent ter-p-0"
-                      />
-                      <span className="ter-font-mono ter-text-xs ter-text-muted-foreground">
-                        {pageBackground}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="ter-grid ter-gap-1">
-                    <label className="ter-text-xs ter-font-semibold ter-text-muted-foreground ter-uppercase">
-                      {config.labels.cardBorderWidth}
-                    </label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={10}
-                      value={cardBorderWidth}
-                      onChange={(e) =>
-                        setSettings({ cardBorderWidth: Number(e.target.value) })
-                      }
-                    />
-                  </div>
-
-                  <div className="ter-grid ter-gap-1">
-                    <label className="ter-text-xs ter-font-semibold ter-text-muted-foreground ter-uppercase">
-                      {config.labels.cardBorderRadius}
-                    </label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={40}
-                      value={cardBorderRadius}
-                      onChange={(e) =>
-                        setSettings({ cardBorderRadius: Number(e.target.value) })
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="ter-flex ter-items-center ter-gap-0.5 ter-rounded-md ter-border ter-bg-background ter-p-0.5">
@@ -288,6 +177,7 @@ export const SortableCanvas = ({
       </SortableContext>
 
       <VariablesInfoDialog open={infoOpen} onOpenChange={setInfoOpen} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 };

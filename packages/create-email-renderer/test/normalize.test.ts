@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeBlocks, normalizeSettings } from "../src/normalize.js";
+import { normalizeBlocks, normalizeFiles, normalizeSettings } from "../src/normalize.js";
 import { DEFAULT_BLOCK_LIBRARY, DEFAULT_SETTINGS } from "../src/default-blocks.js";
 import { parseTemplatePayload } from "../src/server.js";
 
@@ -113,6 +113,7 @@ describe("normalizeSettings", () => {
       cardBorderWidth: 3,
       cardBorderRadius: 10,
       fontFamily: "Georgia, serif",
+      files: [],
     });
   });
 
@@ -122,6 +123,60 @@ describe("normalizeSettings", () => {
     expect(normalizeSettings({ fontFamily: 42 as never }).fontFamily).toBe(
       DEFAULT_SETTINGS.fontFamily,
     );
+  });
+
+  describe("files", () => {
+    it("defaults to an empty list and repairs corrupt entries", () => {
+      expect(normalizeSettings(null).files).toEqual([]);
+      expect(normalizeSettings({ files: "nope" as never }).files).toEqual([]);
+      const [file] = normalizeFiles([
+        // Sin id, sin nombre y con el tamaño como string.
+        { url: "https://cdn.test/guia.pdf", size: "1536", attach: "true" },
+      ]);
+      expect(typeof file.id).toBe("string");
+      expect(file.id.length).toBeGreaterThan(0);
+      // El nombre se deriva de la URL y los defaults se aplican.
+      expect(file.name).toBe("guia.pdf");
+      expect(file.size).toBe(1536);
+      expect(file.attach).toBe(true);
+      expect(file.link).toBe(true);
+    });
+
+    it("drops entries without a usable url (scheme whitelist)", () => {
+      const files = normalizeFiles([
+        { url: "" },
+        { url: "   " },
+        { name: "sin url" },
+        { url: "javascript:alert(1)" },
+        { url: "blob:https://local/abc" },
+        { url: "https://cdn.test/ok.pdf", name: "ok.pdf" },
+        { url: "data:application/pdf;base64,AAAA", name: "inline.pdf" },
+      ]);
+      expect(files.map((f) => f.url)).toEqual([
+        "https://cdn.test/ok.pdf",
+        "data:application/pdf;base64,AAAA",
+      ]);
+    });
+
+    it("respeta link/attach explícitos y el orden de subida", () => {
+      const files = normalizeFiles([
+        { url: "https://cdn.test/a.pdf", name: "a.pdf", link: false, attach: true },
+        { url: "https://cdn.test/b.pdf", name: "b.pdf", link: "false", attach: false },
+        { url: "https://cdn.test/c.pdf", name: "c.pdf" },
+      ]);
+      expect(files.map((f) => [f.name, f.link, f.attach])).toEqual([
+        ["a.pdf", false, true],
+        ["b.pdf", false, false],
+        ["c.pdf", true, false],
+      ]);
+    });
+
+    it("no deriva el nombre de un data: URL (evita nombres gigantes)", () => {
+      const [file] = normalizeFiles([
+        { url: "data:application/pdf;base64,JVBERi0xLjQK" },
+      ]);
+      expect(file.name).toBe("archivo");
+    });
   });
 });
 

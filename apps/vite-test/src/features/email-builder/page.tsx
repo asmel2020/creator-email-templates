@@ -2,13 +2,14 @@ import { EmailBuilder, EmailBuilderProvider } from "create-email-template"
 import {
   SAMPLE_EMAIL_BUILDER_CONFIG,
   onSaveDemo,
+  uploadFileDemo,
   uploadImageDemo,
 } from "./config"
 import { EditorToolbar } from "./components/editor-toolbar"
 import { EmailBuilderDialogs } from "./components/dialogs"
 
 /**
- * Página de demostración: provider (config + uploadImage + autosave)
+ * Página de demostración: provider (config + uploadImage + uploadFile + autosave)
  * + toolbar con los hooks del sistema + builder + dialogs.
  */
 export default function EmailBuilderPage() {
@@ -16,6 +17,7 @@ export default function EmailBuilderPage() {
     <EmailBuilderProvider
       config={SAMPLE_EMAIL_BUILDER_CONFIG}
       uploadImage={uploadImageDemo}
+      uploadFile={uploadFileDemo}
       autosave={{
         intervalMs: 10_000,
         onSave: onSaveDemo,

@@ -14,7 +14,7 @@ corre en Node, Cloudflare Workers, Vercel Edge, Deno y Bun. Es el compañero sin
 `create-email-template` (el editor visual): comparten el mismo core, así que el preview del
 editor y el HTML final nunca divergen.
 
-- 📖 Catálogo de los **25 bloques** (props, defaults, variantes, ejemplos): [`docs/BLOCKS.md`](./docs/BLOCKS.md)
+- 📖 Catálogo de los **26 bloques** (props, defaults, variantes, ejemplos): [`docs/BLOCKS.md`](./docs/BLOCKS.md)
 - 🔌 Cómo exponerlo como **MCP**: [`docs/MCP.md`](./docs/MCP.md)
 
 ---
@@ -28,6 +28,7 @@ editor y el HTML final nunca divergen.
 | Inyectar datos reales (carrito, pedido, productos) en una plantilla guardada | mutar `content` del payload y renderizar |
 | Leer/limpiar un payload viejo o sucio | `parseTemplatePayload` / `normalizeBlocks` |
 | Píxel de apertura y tracking de clics | opción `tracking` |
+| Mandar PDFs/DOCX descargables o adjuntos | `settings.files` + bloque `downloads` |
 
 ## Instalación
 
@@ -41,7 +42,7 @@ Sin React, sin DOM, sin peer deps. Única dependencia: `sanitize-html`.
 
 ```
 payload = { content: EmailBlock[], settings }      ← lo que guarda el editor
-            └── block = { id, type, props }        ← uno de los 25 tipos
+            └── block = { id, type, props }        ← uno de los 26 tipos
 ```
 
 1. **`content`** es una lista ordenada de bloques. Cada bloque tiene un `type` y sus `props`.
@@ -113,6 +114,31 @@ const html = await renderEmailHtml({ blocks, subject, context, settings });
 Ver [`docs/BLOCKS.md`](./docs/BLOCKS.md) para las props de cada bloque y
 [`docs/MCP.md`](./docs/MCP.md) para exponer esto como tool.
 
+### Archivos descargables y adjuntos (`settings.files`)
+
+Los archivos viven en los **settings** (en el editor se suben en *Ajustes*), no en un bloque:
+el bloque `downloads` pinta la lista y tu backend adjunta lo que tenga `attach: true`.
+
+```ts
+const payload = templateJson([blockJson("downloads", { heading: "Recursos" })], {
+  files: [
+    { id: "f1", url: "https://cdn.mi-app.com/guia.pdf", name: "Guía.pdf",
+      size: 1536, mimeType: "application/pdf", link: true, attach: false },
+  ],
+});
+
+// Adjuntos reales: los resuelve tu ESP (el HTML no adjunta nada).
+const { settings } = parseTemplatePayload(payload);
+const attachments = settings.files
+  .filter((f) => f.attach)
+  .map((f) => ({ filename: f.name, path: f.url }));
+```
+
+- `link !== false` ⇒ aparece en el bloque `downloads`. `attach: true` ⇒ tu backend lo adjunta.
+- `url` debe ser **pública** (`https:` o `data:`): `blob:` y esquemas raros se descartan al
+  normalizar. `normalizeFiles(input)` repara ids/nombres/tamaños de una lista sucia.
+- Sin archivos el bloque no emite nada (misma salida que sin el bloque).
+
 ### Tracking (opt-in, por envío)
 
 ```ts
@@ -136,7 +162,7 @@ defecto.
 | Export | Para qué |
 |---|---|
 | `parseTemplatePayload(raw)` | `{ content, settings }` normalizado, nunca lanza. |
-| `normalizeBlocks(input, library?)` / `normalizeSettings(input)` | Limpiar payloads legacy. |
+| `normalizeBlocks(input, library?)` / `normalizeSettings(input)` / `normalizeFiles(input)` | Limpiar payloads legacy y listas de archivos. |
 | `resolveVariables(text, ctx)` / `extractVariables` / `validateVariables` | Variables `{key}`. |
 | `buildTemplateContext(base, extra?)` | Contexto limpio (quita `null`/`""`) sobre `SAMPLE_CONTEXT`. |
 | `renderRichText` / `sanitizeRichText` / `escapeHtml` | Pipeline de rich text. |
@@ -150,7 +176,7 @@ create-email-renderer                  → todo
 create-email-renderer/server           → parseTemplatePayload, renderTemplateEmail, buildTemplateContext
 create-email-renderer/html-render      → renderEmailHtml
 create-email-renderer/build            → blockJson, templateJson
-create-email-renderer/normalize        → normalizeBlocks, normalizeSettings
+create-email-renderer/normalize        → normalizeBlocks, normalizeSettings, normalizeFiles
 create-email-renderer/types            → tipos (EmailBlock, EmailBlockType, EmailSettings…)
 create-email-renderer/variables        → variables + contextos
 create-email-renderer/richtext         → helpers de rich text
@@ -179,6 +205,8 @@ create-email-renderer/registry         → registerBlock, listBlockDefinitions
 | Las imágenes se estiran | `imageHeight` con `object-fit` en Outlook escritorio; usa `0`. |
 | Las imágenes no cargan en Gmail | Son `data:` (SVG inline); Gmail las descarta. Usa URLs `https:`. |
 | Un array de registros queda vacío | Usaste `items` para registros: los registros van en `lines`/`products`/… |
+| El bloque `downloads` no pinta nada | No hay `settings.files` con `link !== false` (o la URL no es `http(s)`/`data:`). |
+| El archivo no se adjunta al correo | El HTML no adjunta: tu backend debe leer `settings.files` con `attach: true`. |
 | El bloque anidado desaparece | `MAX_BLOCK_DEPTH = 1`: los hijos no pueden contener bloques. |
 
 ## Verificación antes de dar algo por hecho

@@ -36,6 +36,7 @@ const SPACING_TYPES = new Set([
   "avatar",
   "code",
   "link",
+  "downloads",
 ])
 
 const spacingGroup = (withGap: boolean): BlockFieldDef => ({

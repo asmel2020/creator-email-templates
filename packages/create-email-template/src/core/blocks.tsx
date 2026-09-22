@@ -47,10 +47,13 @@ import type {
   AvatarProps,
   CodeProps,
   LinkProps,
+  DownloadsProps,
+  EmailFileAttachment,
 } from "./types"
 import { DEFAULT_PALETTE } from "./default-blocks"
 import { resolveVariables } from "./variables"
-import { renderRichText } from "./richtext"
+import { FILE_KIND_LABELS, fileKind, formatBytes } from "./types"
+import { isSafeFileUrl, renderRichText } from "./richtext"
 import { getBlockView, type BlockPreviewProps } from "../block-views"
 
 export const alignMap = {
@@ -828,6 +831,16 @@ const chunk = <T,>(arr: T[], size: number): T[][] => {
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
   return out
 }
+
+/**
+ * Archivos globales del correo (`settings.files`): se suben en Ajustes y el
+ * bloque `downloads` los lee de aquí. El contexto los baja por cualquier
+ * anidamiento (contenedor/columnas/grid) sin pasarlos por props.
+ */
+export const EmailFilesContext = React.createContext<EmailFileAttachment[]>([])
+
+const useEmailFiles = (): EmailFileAttachment[] =>
+  React.useContext(EmailFilesContext)
 
 const BlockSocial = ({ props, context, palette }: { props: SocialProps; context: EmailContext; palette: EmailPalette }) => {
   const accent = props.accentColor || palette.GOLD
@@ -1822,6 +1835,105 @@ const BlockLink = ({ props, context, palette }: { props: LinkProps; context: Ema
   </Section>
 )
 
+/** Lista de archivos descargables (los archivos vienen de Ajustes). */
+const BlockDownloads = ({ props, context, palette }: { props: DownloadsProps; context: EmailContext; palette: EmailPalette }) => {
+  const accent = props.accentColor || palette.GOLD
+  const border = props.borderColor || "#e3dccb"
+  const label = props.buttonLabel || "Descargar"
+  const heading = props.heading || ""
+  const subheading = props.subheading || ""
+  const emptyText = props.emptyText || ""
+  const files = useEmailFiles().filter(
+    (file) => file.link !== false && isSafeFileUrl(file.url),
+  )
+  const cell: React.CSSProperties = {
+    padding: "10px 0",
+    borderBottom: `1px solid ${border}`,
+    verticalAlign: "middle",
+  }
+  // Misma regla que el render HTML: sin archivos y sin mensaje, no hay bloque.
+  if (files.length === 0 && !emptyText) return null
+  return (
+    <Section
+      style={{
+        textAlign: props.align || "left",
+        ...blockSpacing(props),
+        ...(props.backgroundColor ? { backgroundColor: props.backgroundColor } : {}),
+      }}
+    >
+      {heading || subheading ? (
+        <Section style={{ marginBottom: 12 }}>
+          {heading ? (
+            <Text style={{ color: palette.DARK, fontSize: 20, fontWeight: 700, lineHeight: "26px", margin: 0 }}>
+              {resolveVariables(heading, context)}
+            </Text>
+          ) : null}
+          {subheading ? (
+            <Text style={{ color: palette.CREAM_DIM, fontSize: 14, margin: "6px 0 0" }}>
+              {resolveVariables(subheading, context)}
+            </Text>
+          ) : null}
+        </Section>
+      ) : null}
+      <Section style={{ border: `1px solid ${border}`, borderRadius: props.radius ?? 8, padding: "4px 16px" }}>
+        {files.length === 0 ? (
+          <Text style={{ color: palette.CREAM_DIM, fontSize: 14, margin: "10px 0" }}>
+            {emptyText}
+          </Text>
+        ) : (
+          <table width="100%" style={{ borderCollapse: "collapse" }}>
+            <tbody>
+              {files.map((file) => {
+                const size = props.showSize === false ? "" : formatBytes(file.size)
+                return (
+                  <tr key={file.id}>
+                    {props.showIcon !== false ? (
+                      <td width="46" style={cell}>
+                        <Text
+                          style={{
+                            display: "inline-block",
+                            minWidth: 38,
+                            padding: "3px 6px",
+                            borderRadius: 6,
+                            backgroundColor: "#f1e8dc",
+                            color: accent,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            textAlign: "center",
+                            margin: 0,
+                          }}
+                        >
+                          {FILE_KIND_LABELS[fileKind(file.name || file.url, file.mimeType)]}
+                        </Text>
+                      </td>
+                    ) : null}
+                    <td style={cell}>
+                      <Text style={{ color: palette.DARK, fontSize: 14, fontWeight: 600, margin: 0, wordBreak: "break-word" }}>
+                        {file.name || "archivo"}
+                      </Text>
+                      {size ? (
+                        <Text style={{ color: palette.CREAM_DIM, fontSize: 12, margin: "2px 0 0" }}>{size}</Text>
+                      ) : null}
+                    </td>
+                    <td align="right" style={{ ...cell, whiteSpace: "nowrap" }}>
+                      <Link
+                        href={resolveVariables(file.url, context)}
+                        style={{ color: accent, fontSize: 14, fontWeight: 600, textDecoration: "underline" }}
+                      >
+                        {label}
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </Section>
+    </Section>
+  )
+}
+
 /** Preview components react-email por tipo — alimentan el registry de vistas. */
 export const PREVIEW_COMPONENTS: Record<
   string,
@@ -1852,6 +1964,7 @@ export const PREVIEW_COMPONENTS: Record<
   avatar: withPreviewProps(BlockAvatar),
   code: withPreviewProps(BlockCode as never),
   link: withPreviewProps(BlockLink),
+  downloads: withPreviewProps(BlockDownloads),
 }
 
 export const BlockRenderer = ({
@@ -1875,6 +1988,7 @@ export const EmailBody = ({
   cardBorderWidth = 1,
   cardBorderRadius = 4,
   fontFamily,
+  files = [],
 }: {
   blocks: EmailBlock[]
   context: EmailContext
@@ -1882,6 +1996,7 @@ export const EmailBody = ({
   cardBorderWidth?: number
   cardBorderRadius?: number
   fontFamily?: string
+  files?: EmailFileAttachment[]
 }) => (
   <Container
     style={{
@@ -1893,14 +2008,16 @@ export const EmailBody = ({
       ...(fontFamily ? { fontFamily } : {}),
     }}
   >
-    {blocks.map((block) => (
-      <BlockRenderer
-        key={block.id}
-        block={block}
-        context={context}
-        palette={palette}
-      />
-    ))}
+    <EmailFilesContext.Provider value={files}>
+      {blocks.map((block) => (
+        <BlockRenderer
+          key={block.id}
+          block={block}
+          context={context}
+          palette={palette}
+        />
+      ))}
+    </EmailFilesContext.Provider>
   </Container>
 )
 
@@ -1913,6 +2030,7 @@ export const EmailTemplate = ({
   cardBorderWidth = 1,
   cardBorderRadius = 4,
   fontFamily,
+  files = [],
 }: {
   blocks: EmailBlock[]
   subject: string
@@ -1922,6 +2040,7 @@ export const EmailTemplate = ({
   cardBorderWidth?: number
   cardBorderRadius?: number
   fontFamily?: string
+  files?: EmailFileAttachment[]
 }) => (
   <Html>
     <Head />
@@ -1941,6 +2060,7 @@ export const EmailTemplate = ({
         cardBorderWidth={cardBorderWidth}
         cardBorderRadius={cardBorderRadius}
         fontFamily={fontFamily}
+        files={files}
       />
     </Body>
   </Html>

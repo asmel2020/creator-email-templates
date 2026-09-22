@@ -67,13 +67,13 @@ packages/
 │       ├── hooks/           # use-email-builder, use-render-email, use-autosave
 │       └── components/      # builder/ (email-builder, canvas, block-palette, properties-panel,
 │                            # editable-block-renderer, inline-text-editor, selection-toolbar,
-│                            # sortable-item, variables-info-dialog) + ui/ (button, dialog, sheet…) + index.css
+│                            # sortable-item, variables-info-dialog, settings-dialog) + ui/ (button, dialog, sheet…) + index.css
 └── create-email-renderer/   # create-email-renderer — core puro + render HTML
     ├── tsconfig.json        # NodeNext ⇒ imports relativos CON extensión ".js"
     └── src/
         ├── index.ts         # exporta todo; subpaths: /server /html-render /normalize /types /variables /richtext /default-blocks /build
         ├── types.ts         # EmailBlock/Props/Settings/Palette/Context + createBlock/buildBlockMap
-        ├── default-blocks.ts # DEFAULT_BLOCK_LIBRARY (25 tipos), DEFAULT_PALETTE, DEFAULT_SETTINGS
+        ├── default-blocks.ts # DEFAULT_BLOCK_LIBRARY (26 tipos), DEFAULT_PALETTE, DEFAULT_SETTINGS
         ├── variables.ts     # DEFAULT_VARIABLES, SAMPLE_CONTEXT, resolveVariables ({key})
         ├── richtext.ts      # sanitize-html: renderRichText/sanitizeRichText/escapeHtml/normalizeBlockHtml
         ├── normalize.ts     # normalizeBlocks/normalizeSettings (defensa contra payloads legacy)
@@ -81,7 +81,7 @@ packages/
         ├── build.ts         # blockJson(type, props?) / templateJson: constructor tipado de bloques
         ├── tracking.ts      # applyTracking: pixel de apertura + reescritura de enlaces (opt-in)
         ├── SKILL.md         # orientación para agentes (se publica: va en "files")
-        ├── docs/BLOCKS.md   # catálogo de los 25 bloques (props, variantes, ejemplos) — lo vigila test/docs.test.ts
+        ├── docs/BLOCKS.md   # catálogo de los 26 bloques (props, variantes, ejemplos) — lo vigila test/docs.test.ts
         ├── docs/MCP.md      # cómo exponer el paquete como servidor MCP
         ├── llms.txt         # índice corto para agentes (convención llms.txt)
         ├── records.ts       # interno: coerción + RECORD_ARRAY_FIELDS (normalize y build)
@@ -136,9 +136,10 @@ Editor ──getPayload()──▶ { content: EmailBlock[], settings }  ──PU
 
 | Export | Firma / notas |
 |---|---|
-| `renderTemplateEmail({ subject, payload, context?, settings?, palette? })` | Async → `{ html, subject }`. `payload` acepta string/objeto/null. Lanza solo si no quedan bloques tras normalizar. |
+| `renderTemplateEmail({ subject, payload, context?, settings?, palette?, tracking? })` | Async → `{ html, subject }`. Los `settings.files` del payload alimentan el bloque `downloads`. `payload` acepta string/objeto/null. Lanza solo si no quedan bloques tras normalizar. |
 | `renderEmailHtml({ blocks, subject?, context?, settings?, palette? })` | Async → HTML string. Subpath `/html-render`. |
 | `parseTemplatePayload(raw)` | → `{ content, settings }`. **Normaliza** (normalizeBlocks + normalizeSettings) y nunca lanza. |
+| `normalizeFiles(input)` | Repara `settings.files`: ids, nombre derivado de la URL, `size` numérico, defaults `link: true`/`attach: false` y **whitelist de esquemas** (`http`/`https`/`data`); tope 50. Subpath `/normalize`. |
 | `normalizeBlocks(input, library?)` / `normalizeSettings(input)` | Normalización de payloads legacy: descarta tipos desconocidos, completa props desde defaults, repara ids, coacciona tipos. Subpath `/normalize`. |
 | `buildTemplateContext(base, extra?)` | Limpia null/"" y mezcla sobre `SAMPLE_CONTEXT`. |
 | `blockJson(type, props?)` | Constructor **tipado** de un bloque: defaults del esquema vivo + coerción + ids automáticos (bloque y registros) + hijos (`columns`/`blocks` aceptan `[type, props]`, `{type, props}` o un `EmailBlock`). Tipo desconocido → `null`. Subpath `/build`. |
@@ -148,8 +149,8 @@ Editor ──getPayload()──▶ { content: EmailBlock[], settings }  ──PU
 | `renderRichText` / `sanitizeRichText` / `escapeHtml` / `normalizeBlockHtml` / `isRichText` | Pipeline richtext (sanitize-html). |
 | Defaults | `DEFAULT_BLOCK_LIBRARY`, `DEFAULT_PALETTE`, `DEFAULT_SETTINGS`, `DEFAULT_VARIABLES`, `DEFAULT_BASE_VARIABLES`, `DEFAULT_CONTEXTUAL_VARIABLES`, `SAMPLE_CONTEXT`. |
 
-**Documentación publicada con el paquete** (viaja en `npm install`, `files: ["dist","SKILL.md","llms.txt","docs"]`): `SKILL.md` (orientación para agentes), `docs/BLOCKS.md` (catálogo de los 25 bloques con props/defaults/variantes y ejemplos `blockJson`), `docs/MCP.md` (tools y código para montar un MCP) y `llms.txt`. En `create-email-template` solo `SKILL.md` + `llms.txt` (el catálogo es el del renderer). `test/docs.test.ts` falla si un bloque o una API deja de estar documentado.
-| Tipos | `EmailBlock`, `EmailBlockType` (25), `EmailBlockProps` (unión por tipo), `ColumnDef`, `ContainerProps`, `EmailSettings`, `EmailPalette`, `EmailContext`, `BlockDefinition`, `EmailVariable(Section)`, `isContainerType`, `MAX_BLOCK_DEPTH`. `BlockCommonProps` incluye layout: `paddingY/paddingX` + overrides `paddingTop/Right/Bottom/Left`, `marginTop/marginBottom`, `gap`. |
+**Documentación publicada con el paquete** (viaja en `npm install`, `files: ["dist","SKILL.md","llms.txt","docs"]`): `SKILL.md` (orientación para agentes), `docs/BLOCKS.md` (catálogo de los 26 bloques con props/defaults/variantes y ejemplos `blockJson`), `docs/MCP.md` (tools y código para montar un MCP) y `llms.txt`. En `create-email-template` solo `SKILL.md` + `llms.txt` (el catálogo es el del renderer). `test/docs.test.ts` falla si un bloque o una API deja de estar documentado.
+| Tipos | `EmailBlock`, `EmailBlockType` (26), `EmailBlockProps` (unión por tipo), `ColumnDef`, `ContainerProps`, `EmailSettings`, `EmailFileAttachment`, `FileKind`/`fileKind`/`formatBytes`, `EmailPalette`, `EmailContext`, `BlockDefinition`, `EmailVariable(Section)`, `isContainerType`, `MAX_BLOCK_DEPTH`. `BlockCommonProps` incluye layout: `paddingY/paddingX` + overrides `paddingTop/Right/Bottom/Left`, `marginTop/marginBottom`, `gap`. |
 
 **Contrato del endpoint de guardado** (a implementar en template-back-end):
 
@@ -178,7 +179,7 @@ Hooks (todos requieren estar dentro de `<EmailBuilderProvider>`):
 
 Store (`EmailBuilderState`): estado `blocks, selectedId, settings, dirty, propertiesOpen, past` y acciones `addBlock(type, index?)`, `removeBlock(id)`, `duplicateBlock(id)`, `updateBlockProps(id, props)`, `reorder(a, b)`, `setSettings(patch)`, `select(id)`, `setPropertiesOpen(open)`, `hydrate({ blocks, settings? })`, `markSaved()`, `getPayload()`, `undo()`.
 
-Provider: `<EmailBuilderProvider config? uploadImage? autosave?>` — `config` incluye `variables, variableSections, blockLibrary, blockDefaults, palette, defaultSettings, sampleContext, labels, historyLimit (default 50)`.
+Provider: `<EmailBuilderProvider config? uploadImage? uploadFile? autosave?>` — `config` incluye `variables, variableSections, blockLibrary, blockDefaults, palette, defaultSettings, files (límites de subida), sampleContext, labels, historyLimit (default 50)`.
 
 ---
 
@@ -196,7 +197,7 @@ Ciclo: `setInterval(intervalMs /* default 10_000 */)` → si `dirty && !inFlight
 En el HTML el padding se aplica al `<td>` y **los márgenes se mueven a la tabla contenedora** (`section()` divide las claves `margin*`) porque `margin` no aplica a un `<td>`. Con el shorthand y sin márgenes la salida es byte-idéntica a versiones previas (tests de paridad). El React preview (`core/blocks.tsx`) replica la misma lógica con `blockPadding`/`blockSpacing` (exportadas) y el canvas editable las reutiliza. En el panel, la sección "Espaciado" es un `BlockFieldDef` de `kind: "group"` que `register-builtin-views.ts` añade a los bloques con layout (spacer/footer quedan fuera: tienen layout fijo). Es un helper puro y tolerante: no lanza con props corruptas.
 
 ### Bloques disponibles y campos del panel
-25 bloques built-in: `header, hero, heading, text, list, button, image, quote, columns, container, grid, divider, spacer, footer, social, gallery, stats, pricing, product, testimonial, features, avatar, code, link, checkout`. Los últimos son "avanzados" (fila de enlaces, galería de imágenes, cifras, tarjeta de plan, ficha de producto, testimonio con avatar, cuadrícula de features, avatar, código, enlace suelto y resumen de pedido) y se registran igual que el resto (definition en `default-blocks.ts` + `renderHtml` + Preview/Editable/fields). `social` tiene `mode: "text" | "logo"` (nombre vs. medallón con ícono); en modo logo cada `SocialLink.icon` acepta un glifo (`SOCIAL_ICONS`) o una URL de imagen (`http(s)://` o `data:`), con `iconSize` (default 32) y `gap` (separación, default 6).
+26 bloques built-in: `header, hero, heading, text, list, button, image, quote, columns, container, grid, divider, spacer, footer, social, gallery, stats, pricing, product, checkout, downloads, testimonial, features, avatar, code, link`. Los últimos son "avanzados" (fila de enlaces, galería de imágenes, cifras, tarjeta de plan, ficha de producto, testimonio con avatar, cuadrícula de features, avatar, código, enlace suelto y resumen de pedido) y se registran igual que el resto (definition en `default-blocks.ts` + `renderHtml` + Preview/Editable/fields). `social` tiene `mode: "text" | "logo"` (nombre vs. medallón con ícono); en modo logo cada `SocialLink.icon` acepta un glifo (`SOCIAL_ICONS`) o una URL de imagen (`http(s)://` o `data:`), con `iconSize` (default 32) y `gap` (separación, default 6).
 
 El panel es schema-driven (`BlockFieldDef`). Kinds: `text, richText, number, color, align, select, layout, preset, image, icons, hint, row, group, stringList, repeat, custom`. Para arrays de registros se usan `repeat` (`key`, `itemLabel`, `fields[]`; los sub-campos se editan contra el item; `hideIndex: true` quita el número de la etiqueta, p. ej. "Plan" en vez de "Plan 1") y `stringList` (`key`; array de strings). `normalize.ts` normaliza esos arrays vía `RECORD_ARRAY_FIELDS` (`links`, `images`, `stats`, `features`, `entries`, `plans`, `products`, `lines`) y coacciona `bullets` a `string[]`.
 
@@ -235,7 +236,36 @@ Todo el CSS del builder vive en `src/index.css` bajo `.ter-theme` con clases `te
 **Ojo**: los arrays de registros de estos bloques se llaman `products` y `lines` a propósito — **no** `items`, porque `normalizeProps` tiene una rama especial para `key === "items"` (la de `list`, que coacciona a `string[]`) y `RECORD_ARRAY_FIELDS` se indexa por nombre de prop.
 
 ### Tipografía (stack de sistema, opt-out)
-El correo **no** hereda la fuente del editor: `EmailSettings.fontFamily` (default `DEFAULT_FONT_STACK`) se emite inline en el `<body>` y en el `<td>` que envuelve los bloques. `""` = no emitir `font-family` (se hereda la del cliente). El bloque `code` conserva su stack monoespaciado inline (gana por especificidad). `FONT_STACKS` (en `types.ts`, junto a `LIST_ICONS`) trae 7 grupos seguros y el panel Ajustes los expone en un `select` + input libre (Personalizada). **Ojo**: los stacks usan comillas **simples** (`'Segoe UI'`) porque van dentro de un atributo `style="…"`; las dobles romperían el HTML. Las webfonts (`@font-face`) no son fiables (Gmail las elimina, Outlook escritorio las ignora) → dejar siempre fallback de sistema. El canvas y el preview React (`core/blocks.tsx`) aplican la misma familia para no divergir del HTML final.
+El correo **no** hereda la fuente del editor: `EmailSettings.fontFamily` (default `DEFAULT_FONT_STACK`) se emite inline en el `<body>` y en el `<td>` que envuelve los bloques. `""` = no emitir `font-family` (se hereda la del cliente). El bloque `code` conserva su stack monoespaciado inline (gana por especificidad). `FONT_STACKS` (en `types.ts`, junto a `LIST_ICONS`) trae 7 grupos seguros y el dialog **Ajustes** (`settings-dialog.tsx`, abierto con el engranaje del canvas) los expone en un `select` + input libre (Personalizada). **Ojo**: los stacks usan comillas **simples** (`'Segoe UI'`) porque van dentro de un atributo `style="…"`; las dobles romperían el HTML. Las webfonts (`@font-face`) no son fiables (Gmail las elimina, Outlook escritorio las ignora) → dejar siempre fallback de sistema. El canvas y el preview React (`core/blocks.tsx`) aplican la misma familia para no divergir del HTML final.
+
+### Archivos descargables y adjuntos (`settings.files`)
+Los archivos **no viven en un bloque**: se suben una vez en **Ajustes** y quedan en `settings.files`
+(`EmailFileAttachment = { id, url, name, size?, mimeType?, attach?, link? }`), así que viajan en el
+payload y el bloque **`downloads`** los lista donde lo pongas.
+
+- **Interruptores por archivo**: `attach` (lo adjunta tu ESP al enviar; el HTML **no** adjunta nada) y
+  `link` (aparece en `downloads`). Defaults: `link: true`, `attach: false`.
+- **Subida**: prop del provider `uploadFile?: (file: File) => Promise<string>` (espejo de `uploadImage`;
+  debe devolver URL **pública**) + límites en `config.files` (`accept`, `maxSizeMb` 10, `maxCount` 10,
+  `warnTotalMb` 5, con `DEFAULT_FILE_OPTIONS`). Sin `uploadFile` la librería usa `URL.createObjectURL`
+  (blob local: solo preview). El dialog valida formato/tamaño/cantidad con `toast` y avisa si el total
+  adjunto supera `warnTotalMb`.
+- **Normalización**: `normalizeSettings` incluye `files` vía `normalizeFiles` (reutiliza
+  `normalizeRecordArray` + `FILE_FIELDS` de `records.ts`): repara ids/tipos, deriva `name` de la URL
+  (nunca de un `data:`, para no generar nombres gigantes), aplica los defaults cuando la clave falta,
+  **descarta** URLs con esquema no permitido (`http`/`https`/`data`; `javascript:`/`blob:` fuera) y
+  topa en 50. El store **normaliza los settings** al crear el estado y en `hydrate`, así que `files`
+  siempre llega con ids y booleanos al dialog.
+- **Render**: `BlockRenderInput` (registry) gana `settings?: Partial<EmailSettings>` y `renderBlock`
+  lo hila por el anidamiento (`renderContainer`/`renderColumns`/`renderColumnsTable` → grid/footer). El
+  bloque `downloads` filtra `link !== false` + `isSafeFileUrl` y **sin archivos (y sin `emptyText`) no
+  emite ni un byte** (la salida es idéntica a la de una plantilla sin el bloque; lo cubre
+  `test/downloads.test.ts`). En el preview React el equivalente es `EmailFilesContext`, provisto por
+  `EmailTemplate`/`EmailBody` desde el prop `files` (`core/render.tsx` pasa `settings.files`); el
+  editable del canvas lo lee del store. Está en `SPACING_TYPES` y el panel lo edita con kinds
+  `hint`/`text`/`group`/`select` (los archivos se gestionan en Ajustes, no en el bloque).
+- **Contrato del backend**: `settings.files.filter((f) => f.attach).map((f) => ({ filename: f.name, path: f.url }))`
+  → parámetro de adjuntos de tu ESP (Resend/SES…). Documentado en `docs/BLOCKS.md`, `SKILL.md` y los README.
 
 ### Trackeo (aperturas y clics, opt-in por envío)
 `renderEmailHtml` y `renderTemplateEmail` aceptan `tracking?: EmailTracking` (`pixelUrl`, `clickUrl` con `{url}`, `utm`, `exclude`, `transformLink`). Vive **solo en la opción de render**, no en `settings` ni en el payload: el pixel no se guarda en la plantilla ni aparece en el preview del editor. `tracking.ts` es un post-proceso puro sobre el HTML (regex sobre `<a href>`) y con `tracking` apagado la salida es **byte-idéntica** (lo cubre `test/tracking.test.ts` + el snapshot de paridad). `DEFAULT_TRACKING_EXCLUDE` protege la baja y los esquemas no web (`mailto:`, `tel:`, `sms:`, `#`). Caveats: las aperturas no son fiables (Apple MPP, proxy de Gmail) y el wrapping cambia la vista previa del enlace.
@@ -284,7 +314,7 @@ Patrón de `.agents/skills/manage-dialogs-zustand/SKILL.md`: store zustand por f
 
 ## 9. Testing
 
-Estado actual: **sin tests unitarios**. Los gates son `pnpm check-types` + `pnpm build` (el build de `vite-test` valida la API pública completa contra los dist).
+Estado actual: el renderer tiene **161 tests** (vitest, 18 archivos: paridad por bloque, normalize, trackeo, tipografía, variantes, docs, `downloads`…). Los gates son `pnpm check-types` + `pnpm build` (el build de `vite-test` valida la API pública completa contra los dist).
 
 Estrategia recomendada (al añadir tests, usar Vitest):
 

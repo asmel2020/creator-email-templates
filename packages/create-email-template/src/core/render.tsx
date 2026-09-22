@@ -40,5 +40,6 @@ export const renderEmailHtml = async ({
       cardBorderWidth={settings.cardBorderWidth}
       fontFamily={settings.fontFamily}
       cardBorderRadius={settings.cardBorderRadius}
+      files={settings.files}
     />,
   );

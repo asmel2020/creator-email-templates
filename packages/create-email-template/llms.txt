@@ -10,6 +10,8 @@
 
 ## Quick start
 - `import "create-email-template/style.css"` is REQUIRED (scoped under .ter-theme)
-- `<EmailBuilderProvider config? uploadImage? autosave?><EmailBuilder /></EmailBuilderProvider>`
+- `<EmailBuilderProvider config? uploadImage? uploadFile? autosave?><EmailBuilder /></EmailBuilderProvider>`
 - Hooks: useRenderEmail, useAutosaveStatus, useEmailBuilderStore, useEmailBuilderStoreInstance, useEmailBuilderConfig
 - Payload: `{ content, settings }` (render it on the back-end with create-email-renderer)
+- Files: upload PDFs/DOCX in the settings dialog; they live in `settings.files` and the `downloads` block lists them
+- `uploadFile(file) => Promise<string>` must return a PUBLIC url (R2/S3/your API) for real emails

@@ -15,6 +15,7 @@ import {
   EditableCheckout,
   EditableCode,
   EditableDivider,
+  EditableDownloads,
   EditableFeatures,
   EditableGallery,
   EditableHeader,
@@ -633,6 +634,50 @@ const linkFields: BlockFieldDef[] = [
   { kind: "color", key: "backgroundColor", label: "Color de fondo", fallback: "#ffffff" },
 ]
 
+// Los archivos no se editan aquí: se suben en Ajustes y el bloque los lista.
+const downloadsFields: BlockFieldDef[] = [
+  { kind: "hint", labelKey: "downloadsHint" },
+  { kind: "text", key: "heading", label: "Título" },
+  { kind: "text", key: "subheading", label: "Subtítulo" },
+  { kind: "text", key: "buttonLabel", label: "Texto del enlace" },
+  {
+    kind: "group",
+    label: "Estilo",
+    fields: [
+      { kind: "color", key: "accentColor", label: "Color del enlace", fallback: "#d7b227" },
+      { kind: "color", key: "borderColor", label: "Color del borde", fallback: "#e3dccb" },
+      { kind: "number", key: "radius", label: "Borde de la caja (px)", default: 8 },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Lista",
+    fields: [
+      {
+        kind: "select",
+        key: "showIcon",
+        label: "Mostrar tipo de archivo",
+        options: [
+          { value: true, label: "Sí" },
+          { value: false, label: "No" },
+        ],
+      },
+      {
+        kind: "select",
+        key: "showSize",
+        label: "Mostrar tamaño",
+        options: [
+          { value: true, label: "Sí" },
+          { value: false, label: "No" },
+        ],
+      },
+      { kind: "text", key: "emptyText", label: "Mensaje sin archivos" },
+    ],
+  },
+  { kind: "align", key: "align", label: "Alineación" },
+  { kind: "color", key: "backgroundColor", label: "Color de fondo", fallback: "#ffffff" },
+]
+
 /** Editables built-in por tipo — registrados junto a los Preview. */
 export const BUILTIN_EDITABLES: Record<
   string,
@@ -663,6 +708,7 @@ export const BUILTIN_EDITABLES: Record<
   avatar: EditableAvatar,
   code: EditableCode,
   link: EditableLink,
+  downloads: EditableDownloads,
 }
 
 export const BUILTIN_FIELDS: Record<string, BlockFieldDef[]> = {
@@ -691,6 +737,7 @@ export const BUILTIN_FIELDS: Record<string, BlockFieldDef[]> = {
   avatar: avatarFields,
   code: codeFields,
   link: linkFields,
+  downloads: downloadsFields,
 }
 
 export const RICH_INLINE_TYPES = new Set([

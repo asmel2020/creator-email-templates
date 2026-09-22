@@ -70,6 +70,7 @@ describe("renderEmailHtml parity snapshots", () => {
         "columns",
         "container",
         "divider",
+        "downloads",
         "features",
         "footer",
         "gallery",

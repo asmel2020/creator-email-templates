@@ -11,15 +11,18 @@ import { getBlockNormalizeProps, listBlockDefinitions } from "./registry.js";
 import { isContainerType } from "./types.js";
 import {
   coerceNumber,
+  FILE_FIELDS,
   normalizeRecordArray,
   RECORD_ARRAY_FIELDS,
 } from "./records.js";
+import { isSafeFileUrl } from "./richtext.js";
 import type {
   BlockDefinition,
   ColumnDef,
   EmailBlock,
   EmailBlockProps,
   EmailBlockType,
+  EmailFileAttachment,
   EmailSettings,
 } from "./types.js";
 
@@ -220,6 +223,53 @@ export const normalizeBlocks = (
   return normalizeBlockList(input, blockMap, 0);
 };
 
+/** Tope duro de archivos en un payload (el límite de la UI es configurable). */
+const MAX_NORMALIZED_FILES = 50;
+
+/** Nombre legible a partir de la URL del archivo (los `data:` no lo tienen). */
+const fileNameFromUrl = (url: string): string => {
+  if (/^data:/i.test(url)) return "archivo";
+  const clean = url.split("?")[0].split("#")[0];
+  const base = clean.split("/").pop() || "";
+  let name = base;
+  try {
+    name = decodeURIComponent(base);
+  } catch {
+    name = base;
+  }
+  return name.slice(0, 120) || "archivo";
+};
+
+/**
+ * Normaliza `settings.files`: repara ids y tipos, descarta entradas sin URL
+ * usable (esquema no permitido), deriva el nombre de la URL si falta y aplica
+ * los defaults cuando la clave viene ausente (`link: true`, `attach: false`).
+ */
+export const normalizeFiles = (input: unknown): EmailFileAttachment[] => {
+  if (!Array.isArray(input)) return [];
+  const raw = input;
+  return normalizeRecordArray(input, [], FILE_FIELDS)
+    .map((entry, index) => {
+      const source = raw[index];
+      const src =
+        source && typeof source === "object"
+          ? (source as Record<string, unknown>)
+          : {};
+      const url = String(entry.url ?? "").trim();
+      return {
+        id: String(entry.id),
+        url,
+        name: String(entry.name ?? "").trim() || fileNameFromUrl(url),
+        size: coerceNumber(entry.size, 0),
+        mimeType: String(entry.mimeType ?? "").trim(),
+        attach: "attach" in src ? entry.attach === true : false,
+        link: "link" in src ? entry.link !== false : true,
+      };
+    })
+    .filter((file) => isSafeFileUrl(file.url))
+    .slice(0, MAX_NORMALIZED_FILES);
+};
+
 /** Normaliza los settings: solo claves conocidas, coacción numérica, defaults. */
 export const normalizeSettings = (input: unknown): EmailSettings => {
   const raw =
@@ -244,5 +294,6 @@ export const normalizeSettings = (input: unknown): EmailSettings => {
       typeof raw.fontFamily === "string"
         ? raw.fontFamily
         : DEFAULT_SETTINGS.fontFamily,
+    files: normalizeFiles(raw.files),
   };
 };

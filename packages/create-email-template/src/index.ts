@@ -45,3 +45,4 @@ export * from "./components/builder/properties-panel";
 export * from "./components/builder/inline-text-editor";
 export * from "./components/builder/selection-toolbar";
 export * from "./components/builder/variables-info-dialog";
+export * from "./components/builder/settings-dialog";

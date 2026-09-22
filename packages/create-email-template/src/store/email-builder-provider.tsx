@@ -15,6 +15,7 @@ import type {
   AutosaveOptions,
   EmailBuilderConfig,
   ResolvedEmailBuilderConfig,
+  UploadFile,
   UploadImage,
 } from "../config/types";
 import { resolveEmailBuilderConfig } from "../config/defaults";
@@ -28,19 +29,25 @@ const EmailBuilderConfigContext =
 export const EmailBuilderProvider = ({
   config,
   uploadImage,
+  uploadFile,
   autosave,
   children,
 }: {
   config?: EmailBuilderConfig;
   uploadImage?: UploadImage;
+  uploadFile?: UploadFile;
   /** Opt-in: ciclo de autoguardado administrado (ver `AutosaveOptions`). */
   autosave?: AutosaveOptions;
   children: React.ReactNode;
 }) => {
   const resolved = useMemo(() => {
     const base = resolveEmailBuilderConfig(config);
-    return uploadImage ? { ...base, uploadImage } : base;
-  }, [config, uploadImage]);
+    return {
+      ...base,
+      ...(uploadImage ? { uploadImage } : {}),
+      ...(uploadFile ? { uploadFile } : {}),
+    };
+  }, [config, uploadImage, uploadFile]);
   const store = useMemo(() => createEmailBuilderStore(resolved), [resolved]);
 
   // Siempre se invoca el hook (reglas de hooks); sin `autosave` queda

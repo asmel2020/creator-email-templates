@@ -56,6 +56,19 @@ export const RECORD_ARRAY_FIELDS: Record<
   },
 };
 
+/**
+ * Campos de un archivo de `settings.files`. No vive en `RECORD_ARRAY_FIELDS`
+ * porque no es una prop de bloque: lo consume `normalizeFiles`.
+ */
+export const FILE_FIELDS: Record<string, RecordFieldKind> = {
+  url: "string",
+  name: "string",
+  size: "number",
+  mimeType: "string",
+  attach: "boolean",
+  link: "boolean",
+};
+
 /** Normaliza un array de registros con campos conocidos (repara ids/tipos). */
 export const normalizeRecordArray = (
   value: unknown,

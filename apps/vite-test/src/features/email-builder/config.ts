@@ -1,6 +1,7 @@
 import type {
   AutosavePayload,
   EmailBuilderConfig,
+  UploadFile,
   UploadImage,
 } from "create-email-template"
 import { renderTemplateEmail } from "create-email-renderer"
@@ -16,6 +17,31 @@ export const uploadImageDemo: UploadImage = async (file) => {
   await new Promise((resolve) => setTimeout(resolve, 600)) // simula latencia de red
   return URL.createObjectURL(file)
 }
+
+/**
+ * Subida de documentos de demostración. En producción devuelve la URL pública
+ * (R2/S3/tu API): el destinatario la descarga y tu backend adjunta el archivo.
+ *
+ * Acá: los archivos chicos van como `data:` URL para que la demo funcione de
+ * punta a punta (el bloque `downloads` descarta los `blob:`, que no sirven
+ * fuera del navegador); los grandes quedan como blob local (solo preview).
+ */
+export const uploadFileDemo: UploadFile = async (file) => {
+  await new Promise((resolve) => setTimeout(resolve, 600))
+  if (file.size <= 500 * 1024) {
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(new Error("No se pudo leer el archivo"))
+      reader.readAsDataURL(file)
+    })
+  }
+  return URL.createObjectURL(file)
+}
+
+// PDF mínimo en data URI (390 bytes) para que la demo funcione sin internet.
+const GUIA_PDF =
+  "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgMjQwIDkwXS9Db250ZW50cyA0IDAgUi9SZXNvdXJjZXM8PC9Gb250PDwvRjEgNSAwIFI+Pj4+Pj5lbmRvYmoKNCAwIG9iajw8L0xlbmd0aCA0Nj4+c3RyZWFtCkJUIC9GMSAxNCBUZiAyMCA0MCBUZCAoR3VpYSBkZSBlamVtcGxvKSBUaiBFVAplbmRzdHJlYW0gZW5kb2JqCjUgMCBvYmo8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PmVuZG9iagp0cmFpbGVyPDwvUm9vdCAxIDAgUj4+CiUlRU9G"
 
 // Logo de marca por defecto para el bloque Header (data URI SVG para que
 // funcione sin internet). En producción: "https://mi-cdn.com/logo.png".
@@ -93,7 +119,23 @@ export const SAMPLE_EMAIL_BUILDER_CONFIG: EmailBuilderConfig = {
     // Ajustable desde "Ajustes" en el canvas.
     cardBorderWidth: 0,
     cardBorderRadius: 4,
+    // Archivos que lista el bloque "Archivos / Descargas" y que el backend
+    // puede adjuntar al enviar (`attach: true`). Se gestionan en Ajustes.
+    files: [
+      {
+        id: "file-guia",
+        url: GUIA_PDF,
+        name: "Guía de ejemplo.pdf",
+        size: 390,
+        mimeType: "application/pdf",
+        link: true,
+        attach: false,
+      },
+    ],
   },
+
+  // Límites de la subida de archivos (opcional; estos son los defaults)
+  // files: { maxSizeMb: 5, maxCount: 5, warnTotalMb: 3 },
 
   // Datos de ejemplo para previsualizar las etiquetas {etiqueta}
   sampleContext: {

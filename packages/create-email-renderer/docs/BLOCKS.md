@@ -1,6 +1,6 @@
 # Catálogo de bloques — `create-email-renderer`
 
-Referencia completa de los **25 bloques built-in**: qué hace cada uno, sus props con el default
+Referencia completa de los **26 bloques built-in**: qué hace cada uno, sus props con el default
 real del esquema, sus variantes y un ejemplo copiable con `blockJson`. Si eres una IA leyendo
 esto para generar un correo, empieza por [El payload](#el-payload) y luego baja al bloque que
 necesites.
@@ -22,7 +22,7 @@ interface EmailTemplatePayload {
 
 interface EmailBlock {
   id: string;                         // generado por `blockJson` / normalizado si falta
-  type: EmailBlockType;               // uno de los 25 de este documento
+  type: EmailBlockType;               // uno de los 26 de este documento
   props: Record<string, unknown>;     // props del bloque (ver cada sección)
 }
 ```
@@ -91,6 +91,34 @@ Claves de ejemplo ya presentes en `SAMPLE_CONTEXT`: `name`, `firstName`, `lastNa
 | `cardBorderWidth` | `number` (px) | `1` | Borde de la tarjeta del correo (0 = sin marco). |
 | `cardBorderRadius` | `number` (px) | `4` | Redondeo de la tarjeta. |
 | `fontFamily` | `string` | stack de sistema | Tipografía del correo; `""` = no emitir (hereda la del cliente). |
+| `files` | `EmailFileAttachment[]` | `[]` | Archivos subidos (en el editor: **Ajustes**). Los lista el bloque `downloads` y tu backend los adjunta al enviar. |
+
+Cada archivo de `settings.files`:
+
+```ts
+interface EmailFileAttachment {
+  id: string;
+  url: string;        // URL PÚBLICA (https/data). Obligatoria.
+  name: string;       // "guia.pdf" (se deriva de la URL si falta)
+  size?: number;      // bytes (informativo)
+  mimeType?: string;  // "application/pdf" (elige el ícono)
+  attach?: boolean;   // true = adjuntar al correo (lo hace tu ESP)
+  link?: boolean;     // default true = listarlo en el bloque `downloads`
+}
+```
+
+**Contrato con tu backend/ESP** (los adjuntos no viajan en el HTML):
+
+```ts
+const { content, settings } = parseTemplatePayload(payload);   // normaliza y repara
+const attachments = settings.files
+  .filter((f) => f.attach)
+  .map((f) => ({ filename: f.name, path: f.url }));            // p. ej. Resend/SES
+const { html, subject } = await renderTemplateEmail({ subject, payload, context });
+```
+
+> Los esquemas permitidos son `http:`, `https:` y `data:`; cualquier otro (`javascript:`, `blob:`)
+> se descarta al normalizar. Los `blob:` del navegador solo sirven para previsualizar.
 
 ### Anidamiento
 
@@ -449,6 +477,39 @@ Usa un stack monoespaciado propio (gana sobre el `fontFamily` del correo).
 
 > Sin `href` se pinta como texto (sin `<a>`).
 
+## 26. `downloads` — Archivos / Descargas
+
+Lista los archivos de **`settings.files`** (los que se suben en Ajustes) con su tipo, nombre,
+tamaño y un enlace de descarga. **No lleva los archivos en las props**: el bloque solo pinta la
+lista, así que subir un archivo en Ajustes lo actualiza en todos los correos que tengan el bloque.
+
+| Prop | Tipo | Default |
+|---|---|---|
+| `heading` | `string` | `"Recursos descargables"` |
+| `subheading` | `string` | `""` |
+| `buttonLabel` | `string` | `"Descargar"` |
+| `accentColor` | `string` | `#d7b227` (enlace y badge) |
+| `borderColor` | `string` | `#e3dccb` (caja y filas) |
+| `showIcon` / `showSize` | `boolean` | `true` / `true` |
+| `radius` | `number` (px) | `8` |
+| `emptyText` | `string` | `""` (sin archivos no pinta nada) |
+
+Solo aparecen los archivos con `link !== false`; los marcados únicamente como adjunto
+(`attach: true, link: false`) no salen en el HTML. Sin archivos y sin `emptyText` el bloque no
+emite ni un byte (la salida es idéntica a la de una plantilla sin el bloque).
+
+```ts
+templateJson(
+  [blockJson("downloads", { heading: "Recursos de la semana" })],
+  {
+    files: [
+      { id: "f1", url: "https://cdn.tu-sitio.com/guia.pdf", name: "Guía.pdf", size: 1536, mimeType: "application/pdf" },
+      { id: "f2", url: "https://cdn.tu-sitio.com/planilla.xlsx", name: "Planilla.xlsx", mimeType: "application/vnd.ms-excel" },
+    ],
+  },
+);
+```
+
 ---
 
 ## Reglas prácticas al generar correos
@@ -465,3 +526,5 @@ Usa un stack monoespaciado propio (gana sobre el `fontFamily` del correo).
 7. **Peso**: mantén el HTML por debajo de ~102 KB o Gmail lo recortará ("Ver todo el mensaje").
 8. **Variables**: úsalas en textos y enlaces; no inventes claves fuera del `context` (se quedan
    visibles como `{clave}`).
+9. **Archivos descargables**: van en `settings.files`, no en el bloque; usa URL públicas
+   (`https:`) y `attach: true` solo lo que quieras adjuntar de verdad (el HTML no adjunta nada).

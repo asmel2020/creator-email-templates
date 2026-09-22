@@ -17,7 +17,7 @@ los paquetes** (viaja en el `npm install`):
 |---|---|
 | [`AGENTS.md`](../../../AGENTS.md) | Fuente de verdad técnica del monorepo: arquitectura, API, convenciones, gotchas, comandos y publicación. **Léelo primero.** |
 | [`packages/create-email-renderer/SKILL.md`](../../../packages/create-email-renderer/SKILL.md) | Orientación del paquete core: modelo mental, flujos, recetas y reglas de oro. |
-| [`packages/create-email-renderer/docs/BLOCKS.md`](../../../packages/create-email-renderer/docs/BLOCKS.md) | Catálogo de los **25 bloques**: props con defaults, variantes, ejemplos y caveats. |
+| [`packages/create-email-renderer/docs/BLOCKS.md`](../../../packages/create-email-renderer/docs/BLOCKS.md) | Catálogo de los **26 bloques**: props con defaults, variantes, ejemplos y caveats. |
 | [`packages/create-email-renderer/docs/MCP.md`](../../../packages/create-email-renderer/docs/MCP.md) | Cómo exponer el renderer como **MCP** (tools + código). |
 | [`packages/create-email-template/SKILL.md`](../../../packages/create-email-template/SKILL.md) | Lado UI: provider, hooks, store, presets y CSS. |
 

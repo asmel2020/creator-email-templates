@@ -13,7 +13,7 @@ import {
   type BlockDefinition,
   type EmailBlockProps,
 } from "../core/types";
-import { DEFAULT_LABELS } from "./types";
+import { DEFAULT_FILE_OPTIONS, DEFAULT_LABELS } from "./types";
 import type {
   BlockDefaultsMap,
   EmailBuilderConfig,
@@ -72,6 +72,7 @@ export const resolveEmailBuilderConfig = (
     blockMap: buildBlockMap(blockLibrary),
     palette: { ...DEFAULT_PALETTE, ...config?.palette },
     defaultSettings: { ...DEFAULT_SETTINGS, ...config?.defaultSettings },
+    files: { ...DEFAULT_FILE_OPTIONS, ...config?.files },
     sampleContext: config?.sampleContext ?? SAMPLE_CONTEXT,
     labels: { ...DEFAULT_LABELS, ...config?.labels },
     historyLimit: config?.historyLimit ?? 50,

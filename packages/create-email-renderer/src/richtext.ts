@@ -47,6 +47,18 @@ export const escapeHtml = (text: string): string =>
 export const isRichText = (content: string): boolean =>
   /<\/?[a-z][\s\S]*>/i.test(content);
 
+/**
+ * URLs que aceptamos en un enlace de descarga: `http`, `https` y `data:`
+ * (archivos pequeños embebidos). Todo lo demás (`javascript:`, `blob:`,
+ * `file:`, `vbscript:`) se descarta en normalize y en render.
+ */
+export const isSafeFileUrl = (url: unknown): boolean => {
+  if (typeof url !== "string") return false;
+  const value = url.trim();
+  if (!value) return false;
+  return /^(https?:|data:)/i.test(value);
+};
+
 export const normalizeBlockHtml = (html: string): string =>
   html
     .replace(/<div([^>]*)>/gi, "<p$1>")

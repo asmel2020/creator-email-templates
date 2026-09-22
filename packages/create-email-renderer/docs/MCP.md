@@ -33,6 +33,9 @@ Mapeo directo a la API real, sin lógica de negocio propia:
   ignóralo.
 - **`render_email` acepta `blocks` (array) o `payload` (lo guardado)**; si vienen ambos, gana
   `payload`.
+- **Archivos**: `settings.files` viaja dentro del payload; `render_email` lista en el HTML los que
+  tengan `link !== false` y tú decides los adjuntos reales con los que tengan `attach: true`
+  (`parse_template` te devuelve los settings ya normalizados).
 - **`validate_template`** es el guardarraíl: cuenta los bloques descartados por tipo desconocido,
   avisa de `href` vacíos en CTAs, de imágenes sin `src` y del peso del HTML (Gmail recorta a
   ~102 KB).

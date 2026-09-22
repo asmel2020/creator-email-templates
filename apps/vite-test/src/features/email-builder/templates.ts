@@ -96,6 +96,11 @@ const ecommerce = templateJson([
     ctaLabel: "Finalizar compra",
     ctaHref: "https://ejemplo.com/checkout",
   }),
+  blockJson("downloads", {
+    heading: "Recursos de la semana",
+    subheading: "Descarga el material y guárdalo para después.",
+    buttonLabel: "Descargar",
+  }),
   blockJson("footer", {
     variant: "one-column",
     columns: [

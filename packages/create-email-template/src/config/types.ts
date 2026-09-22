@@ -16,6 +16,33 @@ export type DistributivePartial<T> = T extends unknown ? Partial<T> : never;
 export type UploadImage = (file: File) => Promise<string>;
 
 /**
+ * Sube un documento (PDF, DOC, XLS…) y devuelve su URL **pública**: el
+ * destinatario la usa para descargar y tu backend para adjuntarlo al enviar.
+ * Los `blob:`/`data:` locales solo sirven para previsualizar en el editor.
+ */
+export type UploadFile = (file: File) => Promise<string>;
+
+/** Límites y formatos aceptados por el gestor de archivos de Ajustes. */
+export interface EmailBuilderFileOptions {
+  /** Atributo `accept` del input (extensiones/MIME). */
+  accept: string;
+  /** Tamaño máximo por archivo en MB. */
+  maxSizeMb: number;
+  /** Cantidad máxima de archivos subidos. */
+  maxCount: number;
+  /** Avisa (sin bloquear) si el total de adjuntos supera estos MB. */
+  warnTotalMb: number;
+}
+
+export const DEFAULT_FILE_OPTIONS: EmailBuilderFileOptions = {
+  accept:
+    ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.zip,image/*",
+  maxSizeMb: 10,
+  maxCount: 10,
+  warnTotalMb: 5,
+};
+
+/**
  * Valores por defecto personalizados por tipo de bloque.
  * Se aplican sobre los defaults de la librería (o sobre un `blockLibrary` custom).
  * Ej.: `{ text: { text: "Tu mensaje" }, button: { label: "Ver más" } }`
@@ -71,7 +98,24 @@ export interface EmailBuilderLabels {
   cardBorderRadius: string;
   fontFamily: string;
   fontCustom: string;
+  files: string;
+  filesHint: string;
+  filesEmpty: string;
+  uploadFile: string;
+  fileUploaded: string;
+  fileUploadError: string;
+  fileTooLarge: string;
+  fileTypeNotAllowed: string;
+  tooManyFiles: string;
+  totalSizeWarning: string;
+  attachFile: string;
+  linkFile: string;
+  copyFileUrl: string;
+  fileNotPublic: string;
+  removeFile: string;
+  downloadsHint: string;
   settings: string;
+  settingsHint: string;
   deviceMobile: string;
   deviceDesktop: string;
   canvasPreview: string;
@@ -141,7 +185,28 @@ export const DEFAULT_LABELS: EmailBuilderLabels = {
   cardBorderRadius: "Redondeo borde card (px)",
   fontFamily: "Tipografía",
   fontCustom: "Personalizada",
+  files: "Archivos",
+  filesHint:
+    "Sube PDF, DOC, XLS… Marca “Adjuntar” para que viaje como archivo adjunto y “Enlace” para listarlo en el bloque Archivos/Descargas.",
+  filesEmpty: "Aún no hay archivos subidos.",
+  uploadFile: "Subir archivo",
+  fileUploaded: "Archivo subido",
+  fileUploadError: "Error al subir el archivo",
+  fileTooLarge: "El archivo supera el tamaño máximo",
+  fileTypeNotAllowed: "Formato no permitido",
+  tooManyFiles: "Llegaste al máximo de archivos",
+  totalSizeWarning:
+    "Los adjuntos superan el peso recomendado para un correo; algunos clientes pueden recortarlos.",
+  attachFile: "Adjuntar",
+  linkFile: "Enlace",
+  copyFileUrl: "Copiar URL",
+  fileNotPublic:
+    "Solo vista previa: esta URL no sirve en un correo real (sube el archivo a tu storage).",
+  removeFile: "Quitar archivo",
+  downloadsHint:
+    "Los archivos se suben en Ajustes (el ícono ⚙ del lienzo). Aquí solo se muestra el diseño.",
   settings: "Ajustes",
+  settingsHint: "Tipografía, fondo, bordes y archivos del correo.",
   deviceMobile: "Teléfono",
   deviceDesktop: "Laptop / Escritorio",
   canvasPreview: "Vista previa del correo",
@@ -165,6 +230,8 @@ export interface EmailBuilderConfig {
   blockDefaults?: BlockDefaultsMap;
   palette?: Partial<EmailPalette>;
   defaultSettings?: Partial<EmailSettings>;
+  /** Límites y formatos de la subida de archivos (Ajustes). */
+  files?: Partial<EmailBuilderFileOptions>;
   sampleContext?: EmailContext;
   labels?: Partial<EmailBuilderLabels>;
   /** Profundidad máxima del historial de deshacer. Default: 50. */
@@ -178,8 +245,10 @@ export interface ResolvedEmailBuilderConfig {
   blockMap: Record<EmailBlockType, BlockDefinition>;
   palette: EmailPalette;
   defaultSettings: EmailSettings;
+  files: EmailBuilderFileOptions;
   sampleContext: EmailContext;
   uploadImage?: UploadImage;
+  uploadFile?: UploadFile;
   labels: EmailBuilderLabels;
   historyLimit: number;
 }
