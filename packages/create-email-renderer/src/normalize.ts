@@ -201,13 +201,16 @@ const normalizeProps = (
     const value = raw[key];
     if (value === undefined || value === null) continue; // conserva el default
     const fallback = props[key];
-    if (key === "columns") {
+    if (key === "columns" && Array.isArray(fallback)) {
       props[key] = normalizeColumns(
         value,
         fallback as ColumnDef[],
         blockMap,
         depth + 1,
       );
+    } else if (key === "columns") {
+      // `columns` numérico (gallery: imágenes por fila) no es una lista de columnas.
+      props[key] = coerceNumber(value, fallback as number);
     } else if (key === "blocks") {
       props[key] = normalizeBlockList(value, blockMap, depth + 1);
     } else if (RECORD_ARRAY_FIELDS[key]) {

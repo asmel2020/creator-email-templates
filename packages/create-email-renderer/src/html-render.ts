@@ -26,6 +26,7 @@ import type {
   EmailSettings,
   FeaturesProps,
   FooterProps,
+  GalleryImage,
   GalleryProps,
   GridProps,
   HeaderProps,
@@ -489,37 +490,170 @@ const renderSocial = (
   );
 };
 
-const renderGallery = (
-  props: GalleryProps,
+/** Gutter por defecto entre celdas de la galería (2 * 6px de padding). */
+const GALLERY_GUTTER = 12;
+
+interface GalleryImageStyle {
+  radius: number;
+  /** Alto fijo de la imagen; 0 = alto automático. */
+  height: number;
+  /** Medio gutter: padding de celda en la cuadrícula, pr/pl en los demás. */
+  half: number;
+}
+
+/** `<img>` (o placeholder) de una imagen de la galería, con enlace opcional. */
+const galleryImage = (
+  img: GalleryImage | undefined,
   context: EmailContext,
   palette: EmailPalette,
+  style: GalleryImageStyle,
 ): string => {
-  const cols = props.columns === 3 ? 3 : 2;
+  const el =
+    !img || !img.src
+      ? text("(Imagen)", {
+          color: palette.CREAM_DIM,
+          fontSize: 12,
+          margin: 0,
+        })
+      : style.height > 0
+        ? `<img src="${escapeHtml(resolveVariables(img.src, context))}" alt="${escapeHtml(img.alt || "")}" width="100%" height="${style.height}" style="${styleToString({ width: "100%", maxWidth: "100%", display: "block", border: 0, borderRadius: style.radius, height: style.height, objectFit: "cover" })}" />`
+        : `<img src="${escapeHtml(resolveVariables(img.src, context))}" alt="${escapeHtml(img.alt || "")}" width="240" style="max-width:100%;display:block;border:0;border-radius:${style.radius}px;" />`;
+  if (!img || !img.href) return el;
+  return `<a href="${escapeHtml(resolveVariables(img.href, context))}" target="_blank" rel="noopener">${el}</a>`;
+};
+
+const galleryTable = (rows: string): string =>
+  `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody>${rows}</tbody></table>`;
+
+/** Cuadrícula clásica: filas de `columns` (2 o 3) imágenes. */
+const renderGalleryGrid = (
+  images: GalleryImage[],
+  context: EmailContext,
+  palette: EmailPalette,
+  style: GalleryImageStyle,
+  columns: number,
+): string => {
+  const cols = columns === 3 ? 3 : 2;
   const width = Math.floor(100 / cols);
-  const rows = chunkRows(props.images || [], cols)
+  const rows = chunkRows(images, cols)
     .map((row) => {
       const cells = row
         .map((img) => {
-          const el = img.src
-            ? `<img src="${escapeHtml(resolveVariables(img.src, context))}" alt="${escapeHtml(img.alt || "")}" width="240" style="max-width:100%;display:block;border:0;border-radius:6px;" />`
-            : text("(Imagen)", {
-                color: palette.CREAM_DIM,
-                fontSize: 12,
-                margin: 0,
-              });
-          const inner = img.href
-            ? `<a href="${escapeHtml(resolveVariables(img.href, context))}" target="_blank" rel="noopener">${el}</a>`
-            : el;
-          return `<td width="${width}%" valign="top" style="width:${width}%;padding:6px;">${inner}</td>`;
+          const inner = galleryImage(img, context, palette, style);
+          return `<td width="${width}%" valign="top" style="width:${width}%;padding:${style.half}px;">${inner}</td>`;
         })
         .join("");
       return `<tr>${cells}</tr>`;
     })
     .join("");
-  return section(
-    { ...blockSpacing(props), ...bgStyle(props) },
-    `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody>${rows}</tbody></table>`,
+  return galleryTable(rows);
+};
+
+/** Tres columnas en una sola fila. */
+const renderGalleryColumnsLayout = (
+  images: GalleryImage[],
+  context: EmailContext,
+  palette: EmailPalette,
+  style: GalleryImageStyle,
+): string => {
+  const width = Math.round((100 / 3) * 100) / 100;
+  const cells = [0, 1, 2]
+    .map((i) => {
+      // El gutter se reparte: la primera solo a la derecha, la última solo a la izquierda.
+      const padding =
+        i === 0
+          ? `padding-right:${style.half}px;`
+          : i === 2
+            ? `padding-left:${style.half}px;`
+            : `padding-left:${style.half}px;padding-right:${style.half}px;`;
+      const inner = galleryImage(images[i], context, palette, style);
+      return `<td width="${width}%" valign="top" style="width:${width}%;${padding}">${inner}</td>`;
+    })
+    .join("");
+  return galleryTable(`<tr>${cells}</tr>`);
+};
+
+/** Dos apiladas a la izquierda + una alta a la derecha. */
+const renderGalleryHorizontal = (
+  images: GalleryImage[],
+  context: EmailContext,
+  palette: EmailPalette,
+  style: GalleryImageStyle,
+): string => {
+  const left = galleryTable(
+    `<tr><td style="padding-bottom:${style.half}px;">${galleryImage(images[0], context, palette, style)}</td></tr>` +
+      `<tr><td style="padding-top:${style.half}px;">${galleryImage(images[1], context, palette, style)}</td></tr>`,
   );
+  // La imagen alta cubre las dos apiladas más el gutter que las separa.
+  const tall =
+    style.height > 0 ? style.height * 2 + style.half * 2 : style.height;
+  const right = galleryImage(images[2], context, palette, {
+    ...style,
+    height: tall,
+  });
+  return galleryTable(
+    `<tr><td width="50%" valign="top" style="width:50%;padding-right:${style.half}px;">${left}</td>` +
+      `<td width="50%" valign="top" style="width:50%;padding-left:${style.half}px;padding-top:${style.half}px;padding-bottom:${style.half}px;">${right}</td></tr>`,
+  );
+};
+
+/** Una imagen ancha arriba + dos columnas debajo. */
+const renderGalleryVertical = (
+  images: GalleryImage[],
+  context: EmailContext,
+  palette: EmailPalette,
+  style: GalleryImageStyle,
+): string => {
+  const hero = galleryImage(images[0], context, palette, style);
+  const below = [1, 2]
+    .map((i) => {
+      const inner = galleryImage(images[i], context, palette, style);
+      const padding =
+        i === 1
+          ? `padding-right:${style.half}px;`
+          : `padding-left:${style.half}px;`;
+      return `<td width="50%" valign="top" style="width:50%;padding-top:${style.half}px;${padding}">${inner}</td>`;
+    })
+    .join("");
+  return galleryTable(
+    `<tr><td style="padding-bottom:${style.half}px;">${hero}</td></tr>` +
+      `<tr>${below}</tr>`,
+  );
+};
+
+const renderGallery = (
+  props: GalleryProps,
+  context: EmailContext,
+  palette: EmailPalette,
+): string => {
+  const style: GalleryImageStyle = {
+    radius: typeof props.radius === "number" ? props.radius : 6,
+    height: typeof props.imageHeight === "number" ? props.imageHeight : 0,
+    half: (props.gap ?? GALLERY_GUTTER) / 2,
+  };
+  const images = props.images || [];
+  let content: string;
+  switch (props.variant) {
+    case "three-columns":
+      content = renderGalleryColumnsLayout(images, context, palette, style);
+      break;
+    case "horizontal":
+      content = renderGalleryHorizontal(images, context, palette, style);
+      break;
+    case "vertical":
+      content = renderGalleryVertical(images, context, palette, style);
+      break;
+    // "grid" (default) y cualquier variante desconocida.
+    default:
+      content = renderGalleryGrid(
+        images,
+        context,
+        palette,
+        style,
+        props.columns ?? 2,
+      );
+  }
+  return section({ ...blockSpacing(props), ...bgStyle(props) }, content);
 };
 
 const renderStats = (

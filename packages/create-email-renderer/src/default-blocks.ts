@@ -265,13 +265,16 @@ export const DEFAULT_BLOCK_LIBRARY: BlockDefinition[] = [
   {
     type: "gallery",
     label: "Galería",
-    description: "Cuadrícula de imágenes",
+    description: "Galería de imágenes (4 diseños)",
     defaultProps: {
       images: [
         { id: newId(), src: "", alt: "Imagen 1" },
         { id: newId(), src: "", alt: "Imagen 2" },
       ],
       columns: 2,
+      variant: "grid",
+      radius: 6,
+      imageHeight: 0,
       align: "center",
       paddingY: 16,
       paddingX: 32,

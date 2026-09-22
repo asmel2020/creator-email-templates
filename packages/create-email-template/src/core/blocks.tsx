@@ -744,9 +744,142 @@ const BlockSocial = ({ props, context, palette }: { props: SocialProps; context:
   )
 }
 
+const GalleryImageEl = ({
+  image,
+  context,
+  palette,
+  radius,
+  height,
+}: {
+  image?: { id?: string; src?: string; alt?: string; href?: string }
+  context: EmailContext
+  palette: EmailPalette
+  radius: number
+  height: number
+}) => {
+  const inner =
+    !image || !image.src ? (
+      <Text style={{ color: palette.CREAM_DIM, fontSize: 12, margin: 0 }}>
+        (Imagen)
+      </Text>
+    ) : (
+      <Img
+        src={resolveVariables(image.src, context)}
+        alt={image.alt || ""}
+        width={height > 0 ? "100%" : 240}
+        height={height > 0 ? height : undefined}
+        style={{
+          maxWidth: "100%",
+          display: "block",
+          borderRadius: radius,
+          ...(height > 0 ? { width: "100%", height, objectFit: "cover" as const } : {}),
+        }}
+      />
+    )
+  return image?.href ? (
+    <Link href={resolveVariables(image.href, context)}>{inner}</Link>
+  ) : (
+    inner
+  )
+}
+
 const BlockGallery = ({ props, context, palette }: { props: GalleryProps; context: EmailContext; palette: EmailPalette }) => {
-  const cols = props.columns === 3 ? 3 : 2
-  const width = `${Math.floor(100 / cols)}%`
+  const images = props.images || []
+  const radius = typeof props.radius === "number" ? props.radius : 6
+  const height = typeof props.imageHeight === "number" ? props.imageHeight : 0
+  const half = (props.gap ?? 12) / 2
+  const img = (image: (typeof images)[number] | undefined) => (
+    <GalleryImageEl image={image} context={context} palette={palette} radius={radius} height={height} />
+  )
+  const cell = (extra: React.CSSProperties) => ({
+    ...extra,
+    verticalAlign: "top" as const,
+  })
+
+  let content: React.ReactNode
+  switch (props.variant) {
+    case "three-columns": {
+      const width = `${Math.round((100 / 3) * 100) / 100}%`
+      content = (
+        <Row>
+          {[0, 1, 2].map((i) => (
+            <Column
+              key={i}
+              style={cell({
+                width,
+                ...(i === 0
+                  ? { paddingRight: half }
+                  : i === 2
+                    ? { paddingLeft: half }
+                    : { paddingLeft: half, paddingRight: half }),
+              })}
+            >
+              {img(images[i])}
+            </Column>
+          ))}
+        </Row>
+      )
+      break
+    }
+    case "horizontal": {
+      const tall = height > 0 ? height * 2 + half * 2 : 0
+      content = (
+        <Row>
+          <Column style={cell({ width: "50%", paddingRight: half })}>
+            <div style={{ paddingBottom: half }}>{img(images[0])}</div>
+            <div style={{ paddingTop: half }}>{img(images[1])}</div>
+          </Column>
+          <Column
+            style={cell({
+              width: "50%",
+              paddingLeft: half,
+              paddingTop: half,
+              paddingBottom: half,
+            })}
+          >
+            <GalleryImageEl
+              image={images[2]}
+              context={context}
+              palette={palette}
+              radius={radius}
+              height={tall}
+            />
+          </Column>
+        </Row>
+      )
+      break
+    }
+    case "vertical": {
+      content = (
+        <>
+          <div style={{ paddingBottom: half }}>{img(images[0])}</div>
+          <Row>
+            <Column style={cell({ width: "50%", paddingTop: half, paddingRight: half })}>
+              {img(images[1])}
+            </Column>
+            <Column style={cell({ width: "50%", paddingTop: half, paddingLeft: half })}>
+              {img(images[2])}
+            </Column>
+          </Row>
+        </>
+      )
+      break
+    }
+    default: {
+      const cols = props.columns === 3 ? 3 : 2
+      const width = `${Math.floor(100 / cols)}%`
+      content = chunk(images, cols).map((row, ri) => (
+        <Row key={ri}>
+          {row.map((image) => (
+            <Column key={image.id} style={cell({ width, padding: half })}>
+              {img(image)}
+            </Column>
+          ))}
+        </Row>
+      ))
+    }
+  }
+
   return (
     <Section
       style={{
@@ -754,26 +887,7 @@ const BlockGallery = ({ props, context, palette }: { props: GalleryProps; contex
         ...(props.backgroundColor ? { backgroundColor: props.backgroundColor } : {}),
       }}
     >
-      {chunk(props.images || [], cols).map((row, ri) => (
-        <Row key={ri}>
-          {row.map((img) => (
-            <Column key={img.id} style={{ width, padding: 6, verticalAlign: "top" }}>
-              {img.src ? (
-                <Img
-                  src={resolveVariables(img.src, context)}
-                  alt={img.alt || ""}
-                  width={240}
-                  style={{ maxWidth: "100%", borderRadius: 6, display: "block" }}
-                />
-              ) : (
-                <Text style={{ color: palette.CREAM_DIM, fontSize: 12, margin: 0 }}>
-                  (Imagen)
-                </Text>
-              )}
-            </Column>
-          ))}
-        </Row>
-      ))}
+      {content}
     </Section>
   )
 }

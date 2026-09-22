@@ -5,6 +5,7 @@
 import { LIST_ICONS } from "./core/types"
 import type { BlockFieldDef, BlockViewRegistration } from "./block-views"
 import { FOOTER_VARIANTS } from "./footer-presets"
+import { GALLERY_VARIANTS } from "./gallery-presets"
 import { PRICING_VARIANTS } from "./pricing-presets"
 import {
   EditableAvatar,
@@ -226,6 +227,16 @@ const socialFields: BlockFieldDef[] = [
 
 const galleryFields: BlockFieldDef[] = [
   {
+    kind: "preset",
+    key: "variant",
+    label: "Diseño",
+    options: GALLERY_VARIANTS.map((v) => ({
+      value: v.value,
+      label: v.label,
+      build: v.build,
+    })),
+  },
+  {
     kind: "repeat",
     key: "images",
     label: "Imágenes",
@@ -236,7 +247,27 @@ const galleryFields: BlockFieldDef[] = [
       { kind: "text", key: "href", label: "Enlace (opcional)" },
     ],
   },
-  { kind: "number", key: "columns", label: "Imágenes por fila", min: 2, default: 2 },
+  {
+    kind: "group",
+    label: "Cuadrícula",
+    visibleWhen: { key: "variant", equals: "grid" },
+    fields: [
+      { kind: "number", key: "columns", label: "Imágenes por fila", min: 2, default: 2 },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Estilo de imagen",
+    fields: [
+      { kind: "number", key: "radius", label: "Borde redondeado (px)", default: 6 },
+      {
+        kind: "number",
+        key: "imageHeight",
+        label: "Alto de imagen (px, 0 = auto)",
+        default: 0,
+      },
+    ],
+  },
   { kind: "align", key: "align", label: "Alineación" },
   { kind: "color", key: "backgroundColor", label: "Color de fondo", fallback: "#ffffff" },
 ]

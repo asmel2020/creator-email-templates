@@ -20,6 +20,7 @@ export * from "./config/defaults";
 export * from "./block-views";
 export * from "./components/builder/field-editors";
 export * from "./footer-presets";
+export * from "./gallery-presets";
 export * from "./pricing-presets";
 
 // Store (Zustand por instancia + provider)

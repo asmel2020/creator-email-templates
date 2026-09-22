@@ -8,7 +8,7 @@ import {
 } from "../../store/email-builder-provider"
 import { InlineTextEditor } from "./inline-text-editor"
 import { Plus } from "lucide-react"
-import { useState, type CSSProperties } from "react"
+import { useState, type CSSProperties, type ReactNode } from "react"
 import { getBlockView, type BlockEditableProps } from "../../block-views"
 
 interface Props {
@@ -469,43 +469,119 @@ export const EditableSocial = ({ props, palette }: BlockEditableProps) => {
   )
 }
 
-export const EditableGallery = ({ props, palette }: BlockEditableProps) => {
-  const cols = props.columns === 3 ? 3 : 2
-  const images = (props.images || []) as { id: string; src: string; alt?: string }[]
+/** Miniatura de galería en el canvas (o placeholder si no hay imagen). */
+const GalleryThumb = ({
+  image,
+  palette,
+  radius,
+  height,
+}: {
+  image?: { id?: string; src?: string; alt?: string }
+  palette: EmailPalette
+  radius: number
+  height: number
+}) => {
+  if (!image || !image.src) {
+    return (
+      <div
+        style={{
+          height: height > 0 ? height : 80,
+          borderRadius: radius,
+          border: "1px dashed #c9c0ae",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: palette.CREAM_DIM,
+          fontSize: 12,
+        }}
+      >
+        Imagen
+      </div>
+    )
+  }
   return (
-    <div style={blockSpacing(props)}>
-      {chunkItems(images, cols).map((row, ri) => (
-        <div key={ri} style={{ display: "flex", gap: 8 }}>
-          {row.map((img) => (
-            <div key={img.id} style={{ flex: 1, minWidth: 0, padding: 4 }}>
-              {img.src ? (
-                <img
-                  src={img.src}
-                  alt={img.alt || ""}
-                  style={{ width: "100%", borderRadius: 6, display: "block" }}
-                />
-              ) : (
-                <div
-                  style={{
-                    height: 80,
-                    borderRadius: 6,
-                    border: "1px dashed #c9c0ae",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: palette.CREAM_DIM,
-                    fontSize: 12,
-                  }}
-                >
-                  Imagen
-                </div>
-              )}
+    <img
+      src={image.src}
+      alt={image.alt || ""}
+      style={{
+        width: "100%",
+        display: "block",
+        borderRadius: radius,
+        ...(height > 0 ? { height, objectFit: "cover" as const } : {}),
+      }}
+    />
+  )
+}
+
+export const EditableGallery = ({ props, palette }: BlockEditableProps) => {
+  const images = (props.images || []) as {
+    id: string
+    src: string
+    alt?: string
+  }[]
+  const radius = typeof props.radius === "number" ? props.radius : 6
+  const height = typeof props.imageHeight === "number" ? props.imageHeight : 0
+  const gap = props.gap ?? 12
+  const thumb = (image: (typeof images)[number] | undefined, h = height) => (
+    <GalleryThumb image={image} palette={palette} radius={radius} height={h} />
+  )
+
+  let content: ReactNode
+  switch (props.variant) {
+    case "three-columns":
+      content = (
+        <div style={{ display: "flex", gap }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{ flex: 1, minWidth: 0 }}>
+              {thumb(images[i])}
             </div>
           ))}
         </div>
-      ))}
-    </div>
-  )
+      )
+      break
+    case "horizontal":
+      content = (
+        <div style={{ display: "flex", gap }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap }}>
+            {thumb(images[0])}
+            {thumb(images[1])}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {thumb(images[2], height > 0 ? height * 2 + gap : 0)}
+          </div>
+        </div>
+      )
+      break
+    case "vertical":
+      content = (
+        <div style={{ display: "flex", flexDirection: "column", gap }}>
+          {thumb(images[0])}
+          <div style={{ display: "flex", gap }}>
+            <div style={{ flex: 1, minWidth: 0 }}>{thumb(images[1])}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>{thumb(images[2])}</div>
+          </div>
+        </div>
+      )
+      break
+    default: {
+      const cols = props.columns === 3 ? 3 : 2
+      content = (
+        <div style={{ display: "flex", flexDirection: "column", gap }}>
+          {chunkItems(images, cols).map((row, ri) => (
+            <div key={ri} style={{ display: "flex", gap }}>
+              {row.map((image) => (
+                <div key={image.id} style={{ flex: 1, minWidth: 0 }}>
+                  {thumb(image)}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )
+    }
+  }
+
+  return <div style={blockSpacing(props)}>{content}</div>
 }
 
 export const EditableStats = ({ props, palette }: BlockEditableProps) => (

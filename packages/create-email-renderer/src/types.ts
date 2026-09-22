@@ -216,10 +216,28 @@ export interface GalleryImage {
   href?: string;
 }
 
+/**
+ * Diseños de la galería (patrones de react.email):
+ * `grid` cuadrícula 2/3 por fila, `three-columns` tres columnas en una fila,
+ * `horizontal` dos apiladas + una alta a la derecha,
+ * `vertical` una ancha arriba + dos abajo.
+ */
+export type GalleryVariant =
+  | "grid"
+  | "three-columns"
+  | "horizontal"
+  | "vertical";
+
 export interface GalleryProps extends BlockCommonProps {
   images: GalleryImage[];
-  /** Imágenes por fila (2 o 3). */
+  /** Imágenes por fila (2 o 3). Solo aplica a `variant: "grid"`. */
   columns?: number;
+  /** Diseño de la galería (default `"grid"` = cuadrícula clásica). */
+  variant?: GalleryVariant;
+  /** Borde redondeado de las imágenes en px (default 6). */
+  radius?: number;
+  /** Alto fijo de cada imagen en px; 0 = alto automático. */
+  imageHeight?: number;
 }
 
 export interface StatItem {
