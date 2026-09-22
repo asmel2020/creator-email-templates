@@ -328,7 +328,9 @@ Ejecución: `pnpm check-types && pnpm build` siempre antes de dar una tarea por 
 
 ## 10. Publicación npm (estado y procedimiento)
 
-**Estado (2026-09-02): PUBLICADO.** Primera versión en npm vía GitHub Actions: `create-email-template@0.1.1` y `create-email-renderer@0.1.0` (tag `v0.1.1`). Repo: `asmel2020/creator-email-templates` (público — requerido por el provenance de npm). Setup listo: `NPM_TOKEN` en GitHub Secrets, `license: MIT`, `publishConfig.access: "public"`, `prepublishOnly: pnpm build && pnpm check-types`, README propio por paquete.
+**Estado (2026-09-22): PUBLICADO hasta `v0.3.0`.** Última release: `create-email-renderer@0.3.0` y `create-email-template@0.3.0` (tag `v0.3.0`, ambos con provenance). Historial de tags: `v0.1.1` (primera: template `0.1.1` + renderer `0.1.0`), `v0.1.6` (renderer `0.1.1`), `v0.2.0` (registry/nesting/bloques + docs para agentes), `v0.3.0` (archivos descargables: `settings.files` + bloque `downloads`). Repo: `asmel2020/creator-email-templates` (público — requerido por el provenance de npm). Setup listo: `NPM_TOKEN` en GitHub Secrets, `license: MIT`, `publishConfig.access: "public"`, `prepublishOnly: pnpm build && pnpm check-types`, README propio por paquete.
+
+> **Nota de propagación**: tras el push, el job tarda ~1 min, pero npm avisa *"being processed and may take a few minutes to become available"* — `npm view <pkg>@<ver>` puede dar **404 durante ~2-5 min** aunque el publish ya haya salido `+ pkg@ver`. Verifica contra `https://registry.npmjs.org/<pkg>/<ver>` antes de asumir un fallo.
 
 **Procedimiento para publicar una nueva versión:**
 
@@ -337,9 +339,14 @@ Ejecución: `pnpm check-types && pnpm build` siempre antes de dar una tarea por 
 #    REGLA: si cambió create-email-renderer, sube la versión de AMBOS — el
 #    renderer se empaqueta dentro del dist del template, y sin bump el guard
 #    de "versión ya publicada" omitiría el template.
-# 2. Commit y tag:
-git tag vX.Y.Z && git push origin vX.Y.Z
+# 2. Commit del bump, aparte de los features (convención: "chore(release): vX.Y.Z")
+git add packages/create-email-renderer/package.json packages/create-email-template/package.json
+git commit -m "chore(release): vX.Y.Z"
+# 3. Tag (lightweight, como los anteriores) + push de la rama y del tag
+git tag vX.Y.Z && git push origin main && git push origin vX.Y.Z
 ```
+
+`git tag` sin `-a` a propósito: todos los tags del repo son lightweight. Subir la rama antes del tag no es obligatorio (el workflow hace checkout del tag), pero deja `main` y el release alineados. Tras el push, sigue el run con `gh run watch <id>` (el publish tarda ~1 min).
 
 El workflow `publish.yml` hace el resto: install → build → check-types → detecta con `git diff` (contra el tag anterior) qué paquetes cambiaron → publica **solo esos** → si la versión ya existe en el registry, la omite. Cambios solo en apps (ej. `vite-test`) no publican nada. `prepublishOnly` re-verifica build + tipos como última barrera.
 
@@ -349,6 +356,7 @@ El workflow `publish.yml` hace el resto: install → build → check-types → d
 2. **`--no-private` no existe en pnpm 9** (es de pnpm 10) → `Unknown option: 'private'`. `pnpm publish` ya omite privados por sí solo; con `--filter` ni hace falta.
 3. **`--no-git-checks` obligatorio**: el checkout de un tag deja git en detached HEAD y pnpm exige estar en `publish-branch` (master|main) sin él.
 4. **Provenance (`NPM_CONFIG_PROVENANCE: true`) solo funciona con repos PÚBLICOS**: npm rechaza el PUT con `E422 Unprocessable Entity` si el repo origen es privado. No quitarlo a menos que el repo deje de serlo.
+5. **El bump no toca `pnpm-lock.yaml`**: los paquetes workspace se enlazan por ruta, no por versión, así que `pnpm install --frozen-lockfile` (lo que corre el CI) sigue pasando sin regenerar el lockfile. Si `pnpm install` local mete ruido en el lockfile tras un bump, es que algo más cambió.
 
 **Pendientes menores:**
 
