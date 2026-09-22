@@ -9,6 +9,11 @@ import {
 import { newId } from "./id.js";
 import { getBlockNormalizeProps, listBlockDefinitions } from "./registry.js";
 import { isContainerType } from "./types.js";
+import {
+  coerceNumber,
+  normalizeRecordArray,
+  RECORD_ARRAY_FIELDS,
+} from "./records.js";
 import type {
   BlockDefinition,
   ColumnDef,
@@ -17,12 +22,6 @@ import type {
   EmailBlockType,
   EmailSettings,
 } from "./types.js";
-
-const coerceNumber = (value: unknown, fallback: number): number => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  const parsed = parseFloat(String(value));
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
 
 // Props de layout opcionales que no viven en los defaults (undefined = heredar
 // el shorthand); aun así deben sobrevivir a la normalización.
@@ -125,81 +124,6 @@ const normalizeColumns = (
     }
     return withWidth([]);
   });
-};
-
-/** Normaliza un array de registros con campos conocidos (repara ids/tipos). */
-const normalizeRecordArray = (
-  value: unknown,
-  fallback: Array<Record<string, unknown>>,
-  fields: Record<string, "string" | "number" | "boolean" | "string[]">,
-): Array<Record<string, unknown>> => {
-  if (!Array.isArray(value)) return fallback;
-  return value.map((raw) => {
-    const obj =
-      raw && typeof raw === "object"
-        ? (raw as Record<string, unknown>)
-        : ({} as Record<string, unknown>);
-    const out: Record<string, unknown> = {
-      id: typeof obj.id === "string" && obj.id ? obj.id : newId(),
-    };
-    for (const [key, kind] of Object.entries(fields)) {
-      if (kind === "number") {
-        out[key] = coerceNumber(obj[key], 0);
-      } else if (kind === "boolean") {
-        out[key] = obj[key] === true || obj[key] === "true";
-      } else if (kind === "string[]") {
-        out[key] = Array.isArray(obj[key])
-          ? (obj[key] as unknown[]).map((v) => String(v))
-          : [];
-      } else {
-        out[key] = String(obj[key] ?? "");
-      }
-    }
-    return out;
-  });
-};
-
-/** Campos de array de registros por clave de prop. */
-const RECORD_ARRAY_FIELDS: Record<
-  string,
-  Record<string, "string" | "number" | "boolean" | "string[]">
-> = {
-  links: { label: "string", href: "string", icon: "string" },
-  images: { src: "string", alt: "string", href: "string" },
-  stats: { value: "string", label: "string" },
-  products: {
-    imageUrl: "string",
-    name: "string",
-    description: "string",
-    price: "string",
-    ctaLabel: "string",
-    ctaHref: "string",
-  },
-  lines: {
-    imageUrl: "string",
-    name: "string",
-    quantity: "string",
-    price: "string",
-  },
-  entries: {
-    title: "string",
-    description: "string",
-    number: "string",
-    image: "string",
-    href: "string",
-    linkLabel: "string",
-  },
-  features: { icon: "string", title: "string", description: "string" },
-  plans: {
-    title: "string",
-    price: "string",
-    period: "string",
-    description: "string",
-    features: "string[]",
-    ctaLabel: "string",
-    ctaHref: "string",
-    highlighted: "boolean",
-  },
 };
 
 /** Rellena props faltantes/corruptas con los defaults del bloque y coacciona tipos. */

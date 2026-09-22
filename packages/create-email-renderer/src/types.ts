@@ -459,6 +459,35 @@ export type EmailBlockProps =
   | LinkProps
   | CheckoutProps;
 
+/** Props por tipo de bloque (base del tipado de `blockJson`). */
+export interface BlockPropsMap {
+  header: HeaderProps;
+  hero: HeroProps;
+  heading: HeadingProps;
+  text: TextProps;
+  list: ListProps;
+  button: ButtonProps;
+  image: ImageProps;
+  quote: QuoteProps;
+  columns: ColumnsProps;
+  container: ContainerProps;
+  grid: GridProps;
+  divider: DividerProps;
+  spacer: SpacerProps;
+  footer: FooterProps;
+  social: SocialProps;
+  gallery: GalleryProps;
+  stats: StatsProps;
+  pricing: PricingProps;
+  product: ProductProps;
+  testimonial: TestimonialProps;
+  features: FeaturesProps;
+  avatar: AvatarProps;
+  code: CodeProps;
+  link: LinkProps;
+  checkout: CheckoutProps;
+}
+
 export interface EmailBlock {
   id: string;
   type: EmailBlockType;

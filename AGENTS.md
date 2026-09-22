@@ -71,13 +71,15 @@ packages/
 └── create-email-renderer/   # create-email-renderer — core puro + render HTML
     ├── tsconfig.json        # NodeNext ⇒ imports relativos CON extensión ".js"
     └── src/
-        ├── index.ts         # exporta todo; subpaths: /server /html-render /normalize /types /variables /richtext /default-blocks
+        ├── index.ts         # exporta todo; subpaths: /server /html-render /normalize /types /variables /richtext /default-blocks /build
         ├── types.ts         # EmailBlock/Props/Settings/Palette/Context + createBlock/buildBlockMap
         ├── default-blocks.ts # DEFAULT_BLOCK_LIBRARY (25 tipos), DEFAULT_PALETTE, DEFAULT_SETTINGS
         ├── variables.ts     # DEFAULT_VARIABLES, SAMPLE_CONTEXT, resolveVariables ({key})
         ├── richtext.ts      # sanitize-html: renderRichText/sanitizeRichText/escapeHtml/normalizeBlockHtml
         ├── normalize.ts     # normalizeBlocks/normalizeSettings (defensa contra payloads legacy)
         ├── html-render.ts   # renderEmailHtml: JSON → HTML email-safe (tablas + inline styles)
+        ├── build.ts         # blockJson(type, props?) / templateJson: constructor tipado de bloques
+        ├── records.ts       # interno: coerción + RECORD_ARRAY_FIELDS (normalize y build)
         ├── server.ts        # parseTemplatePayload (normaliza), renderTemplateEmail, buildTemplateContext
         └── id.ts            # newId = UUID v7-like (timestamp + contador), sin crypto/Math.random (Workers)
 ```
@@ -134,6 +136,8 @@ Editor ──getPayload()──▶ { content: EmailBlock[], settings }  ──PU
 | `parseTemplatePayload(raw)` | → `{ content, settings }`. **Normaliza** (normalizeBlocks + normalizeSettings) y nunca lanza. |
 | `normalizeBlocks(input, library?)` / `normalizeSettings(input)` | Normalización de payloads legacy: descarta tipos desconocidos, completa props desde defaults, repara ids, coacciona tipos. Subpath `/normalize`. |
 | `buildTemplateContext(base, extra?)` | Limpia null/"" y mezcla sobre `SAMPLE_CONTEXT`. |
+| `blockJson(type, props?)` | Constructor **tipado** de un bloque: defaults del esquema vivo + coerción + ids automáticos (bloque y registros) + hijos (`columns`/`blocks` aceptan `[type, props]`, `{type, props}` o un `EmailBlock`). Tipo desconocido → `null`. Subpath `/build`. |
+| `templateJson(blocks, settings?)` | → `{ content, settings }` listo para `renderTemplateEmail({ payload })`; filtra los `null`. |
 | `resolveVariables(text, ctx)` / `extractVariables` / `validateVariables` | Sintaxis `{key}`. |
 | `renderRichText` / `sanitizeRichText` / `escapeHtml` / `normalizeBlockHtml` / `isRichText` | Pipeline richtext (sanitize-html). |
 | Defaults | `DEFAULT_BLOCK_LIBRARY`, `DEFAULT_PALETTE`, `DEFAULT_SETTINGS`, `DEFAULT_VARIABLES`, `DEFAULT_BASE_VARIABLES`, `DEFAULT_CONTEXTUAL_VARIABLES`, `SAMPLE_CONTEXT`. |
@@ -205,7 +209,7 @@ En la UI, `store/block-tree.ts` concentra las operaciones puras sobre el árbol 
 Todo el CSS del builder vive en `src/index.css` bajo `.ter-theme` con clases `ter-*`; se extrae a `dist/style.css` (fuente embebida base64). El consumidor DEBE importarlo explícitamente. El canvas editable (`editable-block-renderer.tsx`) replica los estilos de `core/blocks.tsx` — mantenlos sincronizados al cambiar un bloque.
 
 ### Plantillas de correos ya armados (demo app)
-`apps/vite-test/src/features/email-builder/templates.ts` define `SAMPLE_TEMPLATES`: plantillas **completas** (varios bloques) que la toolbar carga con `store.hydrate({ blocks })` (normaliza el payload y reinicia el undo). Está **vacío a propósito** hoy — el menú "Plantillas" (`TemplatesMenu`) queda listo para correos completos y muestra "Sin plantillas todavía" mientras no haya. Los patrones de **un** bloque (p. ej. las variantes del bloque Footer) no van acá: viven en la librería (`footer-presets.ts` → `FOOTER_VARIANTS`, consumido por el panel).
+`apps/vite-test/src/features/email-builder/templates.ts` define `SAMPLE_TEMPLATES`: plantillas **completas** (varios bloques) que la toolbar carga con `store.hydrate({ blocks })` (normaliza el payload y reinicia el undo). Hoy trae una de ejemplo (**Ecommerce · novedades**) armada con **`blockJson` / `templateJson`** — el mismo constructor que usaría el back-end para inyectar sus datos. Si no hubiera ninguna, el menú "Plantillas" (`TemplatesMenu`) muestra "Sin plantillas todavía". Los patrones de **un** bloque (p. ej. las variantes del bloque Footer) no van acá: viven en la librería (`footer-presets.ts` → `FOOTER_VARIANTS`, consumido por el panel).
 
 ### Precio / Plan con variantes (3 estilos)
 `pricing` tiene `variant: "card" | "offer" | "two-tiers"` (default `"card"` = la tarjeta de siempre → **sin migración**). `offer` (tabla de oferta) y `two-tiers` (2+ planes con uno destacado) son **data-driven**: `offer` usa `eyebrow/description/note/note2` y botón full-width; `two-tiers` usa `heading/subtitle/plans[]/footnote` (`PricingPlan` = `title/price/period/description/features/ctaLabel/ctaHref/highlighted`). `normalize.ts` normaliza `plans` vía `RECORD_ARRAY_FIELDS` (que ahora soporta campos `boolean` y `string[]`). El selector "Estilo" usa el kind **`preset`** con las recetas de `pricing-presets.ts` (`PRICING_VARIANTS`). `set` con `highlighted` escribe un booleano real (el kind `select` acepta valores no-string). Los `group` del panel usan **`visibleWhen: { key, equals }`** para mostrar solo la sección de la variante activa.

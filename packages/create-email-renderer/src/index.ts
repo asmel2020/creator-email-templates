@@ -9,4 +9,5 @@ export * from "./default-blocks.js";
 export * from "./normalize.js";
 export * from "./html-render.js";
 export * from "./server.js";
+export * from "./build.js";
 export * from "./registry.js";

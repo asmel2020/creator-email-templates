@@ -97,8 +97,42 @@ Esto significa que **añadir props nuevas a un bloque no rompe las plantillas ya
 | `extractVariables(text)` / `validateVariables(text, knownKeys)` | Inspección de variables usadas/no reconocidas. |
 | `renderRichText(html)` | Sanitiza y aplica estilos inline al rich text del editor. |
 | `sanitizeRichText` / `escapeHtml` / `normalizeBlockHtml` / `isRichText` | Piezas del pipeline por separado. |
-| `createBlock(type, library)` | Crea un bloque nuevo con defaultProps (útil para generar plantillas por código). |
+| `blockJson(type, props?)` | Constructor **tipado** de un bloque: defaults del esquema, coerción de tipos e ids automáticos. Tipo desconocido → `null`. |
+| `templateJson(blocks, settings?)` | Arma el payload completo (`{ content, settings }`) para `renderTemplateEmail`. |
+| `createBlock(type, library)` | Crea un bloque nuevo con defaultProps (helper de bajo nivel del editor). |
 | Defaults | `DEFAULT_BLOCK_LIBRARY`, `DEFAULT_PALETTE`, `DEFAULT_SETTINGS`, `DEFAULT_VARIABLES`, `SAMPLE_CONTEXT`. |
+
+## Construir bloques desde el back-end (`blockJson`)
+
+Para inyectar contenido que no vive en la plantilla (un producto, un carrito, una imagen) no
+hace falta escribir el JSON a mano: `blockJson` parte de los **defaults del esquema vivo**,
+coacciona tipos, genera los ids y completa los arrays de registros.
+
+```ts
+import { blockJson, templateJson } from "create-email-renderer";
+
+// Un bloque suelto: lo que no pases queda con su default.
+const promo = blockJson("image", { src: "https://…/promo.jpg", alt: "Promo" });
+
+// Carrito real: los registros se completan solos (id, imageUrl, quantity…).
+const carrito = blockJson("checkout", {
+  heading: "Tu pedido está listo",
+  lines: cart.items.map((i) => ({ name: i.name, price: i.price, quantity: String(i.qty) })),
+});
+
+// Correo completo listo para enviar.
+const { html, subject } = await renderTemplateEmail({
+  subject: "Tu pedido {orderId}",
+  payload: templateJson([promo, carrito], { cardBorderWidth: 0 }),
+  context: { orderId: "A-123" },
+});
+```
+
+- **Posicional**: `blockJson(type, props?)` y `templateJson(blocks, settings?)`.
+- **Tipado**: el editor autocompleta solo las props del tipo elegido; una prop inexistente es error de compilación.
+- **Tolerante**: un tipo desconocido devuelve `null` (y `templateJson` lo descarta).
+- **Anidamiento**: `columns` / `blocks` aceptan `blockJson(...)`, el atajo `[type, props]` o `{ type, props }`; se respeta la profundidad máxima (`MAX_BLOCK_DEPTH`).
+- **Ids**: nunca los administras, se generan con `newId()`.
 
 ## Subpaths
 
@@ -112,6 +146,7 @@ create-email-renderer/types           → todos los tipos + createBlock
 create-email-renderer/variables       → variables, contextos y resolve
 create-email-renderer/richtext        → helpers de rich text
 create-email-renderer/default-blocks  → defaults de bloques, paleta y settings
+create-email-renderer/build           → blockJson, templateJson
 ```
 
 ## Licencia
