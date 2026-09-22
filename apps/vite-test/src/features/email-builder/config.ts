@@ -50,8 +50,26 @@ export const SAMPLE_EMAIL_BUILDER_CONFIG: EmailBuilderConfig = {
     },
     columns: {
       columns: [
-        { id: "col-1", text: "Beneficio destacado 1" },
-        { id: "col-2", text: "Beneficio destacado 2" },
+        {
+          id: "col-1",
+          blocks: [
+            {
+              id: "col-1-b1",
+              type: "text",
+              props: { text: "Beneficio destacado 1", paddingY: 0, paddingX: 0 },
+            },
+          ],
+        },
+        {
+          id: "col-2",
+          blocks: [
+            {
+              id: "col-2-b1",
+              type: "text",
+              props: { text: "Beneficio destacado 2", paddingY: 0, paddingX: 0 },
+            },
+          ],
+        },
       ],
     },
     footer: {
@@ -71,7 +89,9 @@ export const SAMPLE_EMAIL_BUILDER_CONFIG: EmailBuilderConfig = {
   // Ajustes globales de la tarjeta del correo
   defaultSettings: {
     pageBackground: "#f5f1e8",
-    cardBorderWidth: 1,
+    // Sin borde: el contenido arma sus propias cards (planes, footer…).
+    // Ajustable desde "Ajustes" en el canvas.
+    cardBorderWidth: 0,
     cardBorderRadius: 4,
   },
 

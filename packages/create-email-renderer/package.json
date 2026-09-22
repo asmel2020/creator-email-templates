@@ -37,6 +37,10 @@
     "./server": {
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js"
+    },
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "import": "./dist/registry.js"
     }
   },
   "files": [
@@ -47,6 +51,7 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "check-types": "tsc --noEmit",
+    "test": "vitest run",
     "prepublishOnly": "pnpm build && pnpm check-types"
   },
   "dependencies": {
@@ -55,7 +60,8 @@
   "devDependencies": {
     "@types/node": "^24",
     "@types/sanitize-html": "^2.13.0",
-    "typescript": "~6"
+    "typescript": "~6",
+    "vitest": "^5.0.1"
   },
   "license": "MIT",
   "author": "asmel2020",

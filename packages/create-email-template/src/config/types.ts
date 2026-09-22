@@ -33,6 +33,10 @@ export interface EmailBuilderLabels {
   editInlineHint: string;
   listEditHint: string;
   columnsEditHint: string;
+  containerEditHint: string;
+  gridEditHint: string;
+  footerEditHint: string;
+  pricingEditHint: string;
   addListItem: string;
   listItemPlaceholder: string;
   imagePlaceholder: string;
@@ -91,7 +95,16 @@ export const DEFAULT_LABELS: EmailBuilderLabels = {
     "Haz clic en el texto del lienzo para editarlo (negrita, cursiva, etc.).",
   listEditHint:
     "Edita cada elemento en el lienzo. Presiona Enter o usa \"+ Agregar elemento\" para crear otro.",
-  columnsEditHint: "Edita el texto de cada columna directamente en el lienzo.",
+  columnsEditHint:
+    "Suelta bloques dentro de cada columna. Selecciona un bloque anidado para editarlo.",
+  containerEditHint:
+    "Suelta bloques dentro del contenedor. Selecciona un bloque anidado para editarlo.",
+  gridEditHint:
+    "Suelta bloques en cada celda. Cambia la distribución para ajustar los anchos.",
+  footerEditHint:
+    "Cambia el estilo del footer; en los estilos con columnas puedes editar cada bloque interno.",
+  pricingEditHint:
+    "Cambia el estilo del bloque y edita los planes, beneficios y botones en las secciones de abajo.",
   addListItem: "Agregar elemento",
   listItemPlaceholder: "Escribir elemento...",
   imagePlaceholder: "Selecciona una imagen en el panel derecho",

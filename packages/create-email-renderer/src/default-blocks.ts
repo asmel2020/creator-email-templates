@@ -1,4 +1,5 @@
 import { newId } from "./id.js"
+import { registerBlock } from "./registry.js"
 import type { BlockDefinition, EmailPalette, EmailSettings } from "./types.js"
 
 export const DEFAULT_PALETTE: EmailPalette = {
@@ -121,15 +122,81 @@ export const DEFAULT_BLOCK_LIBRARY: BlockDefinition[] = [
   {
     type: "columns",
     label: "Columnas",
-    description: "Dos columnas de texto",
+    description: "Dos columnas con bloques",
     defaultProps: {
       columns: [
-        { id: newId(), text: "Columna 1" },
-        { id: newId(), text: "Columna 2" },
+        {
+          id: newId(),
+          blocks: [
+            {
+              id: newId(),
+              type: "text",
+              props: { text: "Columna 1", align: "left", paddingY: 0, paddingX: 0 },
+            },
+          ],
+        },
+        {
+          id: newId(),
+          blocks: [
+            {
+              id: newId(),
+              type: "text",
+              props: { text: "Columna 2", align: "left", paddingY: 0, paddingX: 0 },
+            },
+          ],
+        },
       ],
       align: "left",
       paddingY: 16,
       paddingX: 32,
+      gap: 8,
+    },
+  },
+  {
+    type: "container",
+    label: "Contenedor",
+    description: "Agrupa bloques en una columna",
+    defaultProps: {
+      blocks: [],
+      align: "left",
+      paddingY: 16,
+      paddingX: 32,
+    },
+  },
+  {
+    type: "grid",
+    label: "Cuadrícula",
+    description: "Fila de celdas con anchos",
+    defaultProps: {
+      columns: [
+        {
+          id: newId(),
+          width: 50,
+          blocks: [
+            {
+              id: newId(),
+              type: "text",
+              props: { text: "Celda 1", align: "left", paddingY: 0, paddingX: 0 },
+            },
+          ],
+        },
+        {
+          id: newId(),
+          width: 50,
+          blocks: [
+            {
+              id: newId(),
+              type: "text",
+              props: { text: "Celda 2", align: "left", paddingY: 0, paddingX: 0 },
+            },
+          ],
+        },
+      ],
+      layout: "1-2",
+      align: "left",
+      paddingY: 16,
+      paddingX: 32,
+      gap: 12,
     },
   },
   {
@@ -153,10 +220,209 @@ export const DEFAULT_BLOCK_LIBRARY: BlockDefinition[] = [
   {
     type: "footer",
     label: "Footer",
-    description: "Legal y baja de suscripción",
+    description: "Pie legal o de marca (3 estilos)",
     defaultProps: {
+      variant: "classic",
+      columns: [],
       text: "Recibes este correo por estar registrado en nuestra plataforma.",
       brandName: "Tu Marca",
+      align: "center",
+      paddingY: 24,
+      paddingX: 32,
+      gap: 12,
+    },
+  },
+  {
+    type: "social",
+    label: "Redes sociales",
+    description: "Fila de enlaces sociales",
+    defaultProps: {
+      links: [
+        {
+          id: newId(),
+          label: "Instagram",
+          href: "https://instagram.com",
+          icon: "◎",
+        },
+        { id: newId(), label: "X", href: "https://x.com", icon: "X" },
+        {
+          id: newId(),
+          label: "LinkedIn",
+          href: "https://linkedin.com",
+          icon: "in",
+        },
+      ],
+      mode: "text",
+      align: "center",
+      paddingY: 16,
+      paddingX: 32,
+      color: "#221d15",
+      accentColor: "#d7b227",
+      iconSize: 32,
+      gap: 6,
+    },
+  },
+  {
+    type: "gallery",
+    label: "Galería",
+    description: "Cuadrícula de imágenes",
+    defaultProps: {
+      images: [
+        { id: newId(), src: "", alt: "Imagen 1" },
+        { id: newId(), src: "", alt: "Imagen 2" },
+      ],
+      columns: 2,
+      align: "center",
+      paddingY: 16,
+      paddingX: 32,
+    },
+  },
+  {
+    type: "stats",
+    label: "Estadísticas",
+    description: "Cifras destacadas en fila",
+    defaultProps: {
+      stats: [
+        { id: newId(), value: "500+", label: "Clientes" },
+        { id: newId(), value: "98%", label: "Satisfacción" },
+        { id: newId(), value: "24/7", label: "Soporte" },
+      ],
+      align: "center",
+      paddingY: 24,
+      paddingX: 32,
+      accentColor: "#d7b227",
+    },
+  },
+  {
+    type: "pricing",
+    label: "Precio / Plan",
+    description: "Tarjeta de plan con beneficios (3 estilos)",
+    defaultProps: {
+      variant: "card",
+      title: "Plan Pro",
+      price: "$29",
+      period: "/mes",
+      bullets: ["Acceso completo", "Soporte prioritario", "Sin límites"],
+      ctaLabel: "Suscribirme",
+      ctaHref: "",
+      eyebrow: "",
+      description: "",
+      note: "",
+      note2: "",
+      heading: "",
+      subtitle: "",
+      plans: [],
+      footnote: "",
+      align: "center",
+      paddingY: 24,
+      paddingX: 32,
+      accentColor: "#d7b227",
+      textColor: "#221d15",
+    },
+  },
+  {
+    type: "product",
+    label: "Producto",
+    description: "Imagen, precio y botón de compra",
+    defaultProps: {
+      imageUrl: "",
+      name: "Nombre del producto",
+      description: "Una breve descripción del producto.",
+      price: "$49",
+      ctaLabel: "Comprar ahora",
+      ctaHref: "",
+      align: "center",
+      paddingY: 24,
+      paddingX: 32,
+    },
+  },
+  {
+    type: "testimonial",
+    label: "Testimonio",
+    description: "Cita con avatar y autor",
+    defaultProps: {
+      avatarUrl: "",
+      quote: "Cambió por completo la forma en que trabajamos.",
+      name: "Nombre Apellido",
+      role: "Cargo en la empresa",
+      align: "left",
+      paddingY: 20,
+      paddingX: 32,
+      accentColor: "#d7b227",
+    },
+  },
+  {
+    type: "features",
+    label: "Características",
+    description: "Cuadrícula de features",
+    defaultProps: {
+      features: [
+        {
+          id: newId(),
+          icon: "✓",
+          title: "Fácil de usar",
+          description: "Empieza en minutos, sin configuración.",
+        },
+        {
+          id: newId(),
+          icon: "★",
+          title: "Potente",
+          description: "Todo lo que necesitas en un solo lugar.",
+        },
+      ],
+      columns: 2,
+      align: "left",
+      paddingY: 20,
+      paddingX: 32,
+      accentColor: "#d7b227",
+    },
+  },
+  {
+    type: "avatar",
+    label: "Avatar",
+    description: "Foto, nombre y cargo",
+    defaultProps: {
+      imageUrl: "",
+      name: "Nombre Apellido",
+      role: "Cargo",
+      size: 96,
+      align: "center",
+      paddingY: 16,
+      paddingX: 32,
+    },
+  },
+  {
+    type: "code",
+    label: "Código",
+    description: "Bloque de código monoespaciado",
+    defaultProps: {
+      code: "npm install create-email-template",
+      language: "bash",
+      align: "left",
+      paddingY: 16,
+      paddingX: 32,
+      backgroundColor: "#0d0b08",
+      color: "#f5f1e8",
+    },
+  },
+  {
+    type: "link",
+    label: "Enlace",
+    description: "Enlace de texto suelto",
+    defaultProps: {
+      label: "Ver más",
+      href: "",
+      align: "left",
+      paddingY: 8,
+      paddingX: 32,
+      color: "#a98a1e",
     },
   },
 ]
+
+// Registro de definiciones: la librería viva del registry es la fuente para
+// normalize/listBlockDefinitions; DEFAULT_BLOCK_LIBRARY sigue siendo el
+// snapshot estático exportado por compat.
+for (const definition of DEFAULT_BLOCK_LIBRARY) {
+  registerBlock({ definition })
+}

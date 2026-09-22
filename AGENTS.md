@@ -73,7 +73,7 @@ packages/
     └── src/
         ├── index.ts         # exporta todo; subpaths: /server /html-render /normalize /types /variables /richtext /default-blocks
         ├── types.ts         # EmailBlock/Props/Settings/Palette/Context + createBlock/buildBlockMap
-        ├── default-blocks.ts # DEFAULT_BLOCK_LIBRARY (12 tipos), DEFAULT_PALETTE, DEFAULT_SETTINGS
+        ├── default-blocks.ts # DEFAULT_BLOCK_LIBRARY (24 tipos), DEFAULT_PALETTE, DEFAULT_SETTINGS
         ├── variables.ts     # DEFAULT_VARIABLES, SAMPLE_CONTEXT, resolveVariables ({key})
         ├── richtext.ts      # sanitize-html: renderRichText/sanitizeRichText/escapeHtml/normalizeBlockHtml
         ├── normalize.ts     # normalizeBlocks/normalizeSettings (defensa contra payloads legacy)
@@ -137,7 +137,7 @@ Editor ──getPayload()──▶ { content: EmailBlock[], settings }  ──PU
 | `resolveVariables(text, ctx)` / `extractVariables` / `validateVariables` | Sintaxis `{key}`. |
 | `renderRichText` / `sanitizeRichText` / `escapeHtml` / `normalizeBlockHtml` / `isRichText` | Pipeline richtext (sanitize-html). |
 | Defaults | `DEFAULT_BLOCK_LIBRARY`, `DEFAULT_PALETTE`, `DEFAULT_SETTINGS`, `DEFAULT_VARIABLES`, `DEFAULT_BASE_VARIABLES`, `DEFAULT_CONTEXTUAL_VARIABLES`, `SAMPLE_CONTEXT`. |
-| Tipos | `EmailBlock`, `EmailBlockType` (12), `EmailBlockProps` (unión por tipo), `EmailSettings`, `EmailPalette`, `EmailContext`, `BlockDefinition`, `EmailVariable(Section)`. |
+| Tipos | `EmailBlock`, `EmailBlockType` (24), `EmailBlockProps` (unión por tipo), `ColumnDef`, `ContainerProps`, `EmailSettings`, `EmailPalette`, `EmailContext`, `BlockDefinition`, `EmailVariable(Section)`, `isContainerType`, `MAX_BLOCK_DEPTH`. `BlockCommonProps` incluye layout: `paddingY/paddingX` + overrides `paddingTop/Right/Bottom/Left`, `marginTop/marginBottom`, `gap`. |
 
 **Contrato del endpoint de guardado** (a implementar en template-back-end):
 
@@ -178,11 +178,37 @@ Ciclo: `setInterval(intervalMs /* default 10_000 */)` → si `dirty && !inFlight
 ### Undo lineal (sin redo)
 `past: EmailHistoryEntry[]` en el store; cada acción mutante registra snapshot (`structuredClone`) del estado previo. **Coalescing 600ms** por `bloque:prop` (o `settings:prop`): escribir continuo genera un solo undo. `historyLimit` (50) poda la pila. `hydrate()` la vacía. Ctrl/Cmd+Z cableado en `EmailBuilder` — se ignora si el foco está en `contenteditable/input/textarea` (el editor inline conserva su undo nativo). Undo marca `dirty: true`.
 
+### Layout y espaciado (padding / margen / gap)
+`BlockCommonProps` expone el layout de todo bloque: `paddingY/paddingX` (shorthand) y los overrides por lado `paddingTop/Right/Bottom/Left`, que **ganan sobre el shorthand** cuando están definidos. Además `marginTop`/`marginBottom` (separación externa) y `gap` (separación interna: gutter de columnas, futuro separador de listas). Los overrides y márgenes son **opcionales y viven fuera de `defaultProps`** (`undefined` = heredar); `normalize.ts` los preserva vía `LAYOUT_KEYS` y descarta props legadas desconocidas (ej. `marginLeft`).
+
+En el HTML el padding se aplica al `<td>` y **los márgenes se mueven a la tabla contenedora** (`section()` divide las claves `margin*`) porque `margin` no aplica a un `<td>`. Con el shorthand y sin márgenes la salida es byte-idéntica a versiones previas (tests de paridad). El React preview (`core/blocks.tsx`) replica la misma lógica con `blockPadding`/`blockSpacing` (exportadas) y el canvas editable las reutiliza. En el panel, la sección "Espaciado" es un `BlockFieldDef` de `kind: "group"` que `register-builtin-views.ts` añade a los bloques con layout (spacer/footer quedan fuera: tienen layout fijo). Es un helper puro y tolerante: no lanza con props corruptas.
+
+### Bloques disponibles y campos del panel
+24 bloques built-in: `header, hero, heading, text, list, button, image, quote, columns, container, grid, divider, spacer, footer, social, gallery, stats, pricing, product, testimonial, features, avatar, code, link`. Los diez últimos son "avanzados" (fila de enlaces, cuadrícula de imágenes, cifras, tarjeta de plan, ficha de producto, testimonio con avatar, cuadrícula de features, avatar, código, enlace suelto) y se registran igual que el resto (definition en `default-blocks.ts` + `renderHtml` + Preview/Editable/fields). `social` tiene `mode: "text" | "logo"` (nombre vs. medallón con ícono); en modo logo cada `SocialLink.icon` acepta un glifo (`SOCIAL_ICONS`) o una URL de imagen (`http(s)://` o `data:`), con `iconSize` (default 32) y `gap` (separación, default 6).
+
+El panel es schema-driven (`BlockFieldDef`). Kinds: `text, richText, number, color, align, select, layout, preset, image, icons, hint, row, group, stringList, repeat, custom`. Para arrays de registros se usan `repeat` (`key`, `itemLabel`, `fields[]`; los sub-campos se editan contra el item) y `stringList` (`key`; array de strings). `normalize.ts` normaliza esos arrays vía `RECORD_ARRAY_FIELDS` (`links`, `images`, `stats`, `features`) y coacciona `bullets` a `string[]`.
+
+### Footer con variantes (3 estilos)
+El bloque `footer` es un **contenedor** (`isContainerType("footer")`) con `variant: "classic" | "one-column" | "two-columns"` (default `"classic"`). `classic` (Footer 1) mantiene la barra oscura de siempre con `text`/`brandName` → **sin migración** para plantillas viejas. `one-column` / `two-columns` (Footer 2/3) viven de `columns: ColumnDef[]` (recetas de 1 o 2 celdas con hijos anidados editables). El panel usa el field kind **`preset`** ("Estilo"): al cambiar, `set({ variant, ...build() })` donde `build()` viene de `footer-presets.ts` (`FOOTER_VARIANTS`) y reescribe `columns`+fondo+padding con `newId()` fresco. Un footer **no puede anidarse** (es contenedor → se descarta a profundidad > 0).
+
+### Anidamiento (profundidad 1)
+`container` y `columns` son bloques contenedores. `columns` v2 guarda `ColumnDef[] = { id, blocks: EmailBlock[] }[]` (antes eran columnas de texto plano); el `container` guarda `blocks: EmailBlock[]`; la `grid` guarda el mismo `ColumnDef[]` pero con `width` (porcentaje) por celda y un preset `layout` en el panel (`50/50`, `1/3+2/3`, `2/3+1/3`, `3×1/3`, `4×1/4`) que reescribe las celdas conservando los hijos por índice. `MAX_BLOCK_DEPTH = 1`: un bloque puede contener hijos, pero esos hijos no pueden volver a contener bloques. Lo aplica `normalize.ts` (descarta contenedores a profundidad > 0 al normalizar hijos) y el store vía `canNestType` (la paleta ignora un drop de contenedor dentro de un contenedor).
+
+`normalizeBlocks` migra automáticamente columnas legacy `{ id, text }` a `{ id, blocks: [text] }` — las plantillas viejas se auto-reparan. El render HTML (`renderContainer`/`renderColumns`) y el preview react-email (`BlockContainer`/`BlockColumns`) delegan en el render por bloque, así que cualquier tipo built-in o plugin funciona anidado.
+
+En la UI, `store/block-tree.ts` concentra las operaciones puras sobre el árbol (`BlockLocation = { parentId?, columnId? }`, `findBlockDeep`, `getBlockList`/`setBlockList`, `updateBlockDeep`, `removeBlockDeep`). El store expone `addBlock(type, index?, location?)`, `reorder(a, b, location?)` y `moveBlock(id, targetLocation, targetIndex)`. El canvas raíz usa `SortableItem` (drag con dnd-kit); los anidados usan `NestedBlockList` (droppable para la paleta + reordenamiento por botones, sin DnD anidado). Los editables de contenedores viven en `components/builder/nested-blocks.tsx` (módulo aparte para romper el ciclo `NestedBlockList → EditableBlockRenderer`).
+
 ### Normalización de payloads
 `normalizeBlocks` completa props desde los defaults de la blockLibrary, descarta tipos desconocidos y props legadas, repara ids/columnas y coacciona números/strings/arrays. Puntos de aplicación: `parseTemplatePayload` (backend) y `hydrate` (editor). **Consecuencia**: añadir props nuevas a un bloque no rompe plantillas viejas — se auto-reparan al cargarse. Sin script de migración.
 
 ### Aislamiento de estilos
 Todo el CSS del builder vive en `src/index.css` bajo `.ter-theme` con clases `ter-*`; se extrae a `dist/style.css` (fuente embebida base64). El consumidor DEBE importarlo explícitamente. El canvas editable (`editable-block-renderer.tsx`) replica los estilos de `core/blocks.tsx` — mantenlos sincronizados al cambiar un bloque.
+
+### Plantillas de correos ya armados (demo app)
+`apps/vite-test/src/features/email-builder/templates.ts` define `SAMPLE_TEMPLATES`: plantillas **completas** (varios bloques) que la toolbar carga con `store.hydrate({ blocks })` (normaliza el payload y reinicia el undo). Está **vacío a propósito** hoy — el menú "Plantillas" (`TemplatesMenu`) queda listo para correos completos y muestra "Sin plantillas todavía" mientras no haya. Los patrones de **un** bloque (p. ej. las variantes del bloque Footer) no van acá: viven en la librería (`footer-presets.ts` → `FOOTER_VARIANTS`, consumido por el panel).
+
+### Precio / Plan con variantes (3 estilos)
+`pricing` tiene `variant: "card" | "offer" | "two-tiers"` (default `"card"` = la tarjeta de siempre → **sin migración**). `offer` (tabla de oferta) y `two-tiers` (2+ planes con uno destacado) son **data-driven**: `offer` usa `eyebrow/description/note/note2` y botón full-width; `two-tiers` usa `heading/subtitle/plans[]/footnote` (`PricingPlan` = `title/price/period/description/features/ctaLabel/ctaHref/highlighted`). `normalize.ts` normaliza `plans` vía `RECORD_ARRAY_FIELDS` (que ahora soporta campos `boolean` y `string[]`). El selector "Estilo" usa el kind **`preset`** con las recetas de `pricing-presets.ts` (`PRICING_VARIANTS`). `set` con `highlighted` escribe un booleano real (el kind `select` acepta valores no-string). Los `group` del panel usan **`visibleWhen: { key, equals }`** para mostrar solo la sección de la variante activa.
 
 ### Dialogs (demo app)
 Patrón de `.agents/skills/manage-dialogs-zustand/SKILL.md`: store zustand por feature con `open: DialogType | null`, dialogs controlados SIN `DialogTrigger`, y un orquestador `components/dialogs.tsx` que monta el dialog activo. `apps/vite-test/src/features/email-builder/` es la referencia (toolbar, preview dialog React-vs-Server, autosave indicator).

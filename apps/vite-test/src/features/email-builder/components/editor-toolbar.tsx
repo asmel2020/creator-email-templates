@@ -1,9 +1,21 @@
-import { EyeIcon, MailIcon, Undo2Icon } from "lucide-react"
-import { useEmailBuilderStore } from "create-email-template"
+import { EyeIcon, LayoutTemplateIcon, MailIcon, Undo2Icon } from "lucide-react"
+import {
+  useEmailBuilderStore,
+  useEmailBuilderStoreInstance,
+} from "create-email-template"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useEmailBuilderDialogsStore } from "../stores/use-email-builder-dialogs"
 import { AutosaveIndicator } from "./autosave-indicator"
+import { SAMPLE_TEMPLATES } from "../templates"
 
 /**
  * Botón de undo: se habilita solo cuando hay historial (`past.length > 0`).
@@ -39,6 +51,41 @@ function BlockCount() {
 }
 
 /**
+ * Cargador de correos ya armados: hidrata el canvas con plantillas completas.
+ * `hydrate` normaliza el payload y reinicia el historial de undo.
+ */
+function TemplatesMenu() {
+  const store = useEmailBuilderStoreInstance()
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button size="sm" variant="outline" />}>
+        <LayoutTemplateIcon data-slot="icon" />
+        Plantillas
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-fit">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Correos ya armados</DropdownMenuLabel>
+          {SAMPLE_TEMPLATES.length === 0 ? (
+            <DropdownMenuItem disabled>Sin plantillas todavía</DropdownMenuItem>
+          ) : (
+            SAMPLE_TEMPLATES.map((template) => (
+              <DropdownMenuItem
+                key={template.id}
+                onClick={() =>
+                  store.getState().hydrate({ blocks: template.blocks })
+                }
+              >
+                {template.name}
+              </DropdownMenuItem>
+            ))
+          )}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+/**
  * Toolbar del editor de demostración.
  * Composición de tres integraciones del sistema en un solo header:
  *  1. store del builder (undo, contador de bloques)
@@ -67,6 +114,7 @@ export function EditorToolbar() {
       <div className="flex items-center gap-2">
         <AutosaveIndicator />
         <Separator orientation="vertical" className="mx-1 !h-5" />
+        <TemplatesMenu />
         <UndoButton />
         <Button size="sm" onClick={() => setOpen("preview")}>
           <EyeIcon data-slot="icon" />

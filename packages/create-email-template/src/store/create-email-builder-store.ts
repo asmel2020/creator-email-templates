@@ -8,7 +8,19 @@ import {
   type EmailBlockType,
   type EmailSettings,
 } from "../core/types"
+import {
+  canNestType,
+  findBlockDeep,
+  findBlockLocation,
+  getBlockList,
+  removeBlockDeep,
+  setBlockList,
+  updateBlockDeep,
+  type BlockLocation,
+} from "./block-tree"
 import { type ResolvedEmailBuilderConfig } from "../config/types"
+
+export type { BlockLocation }
 
 export interface EmailBuilderPayload {
   content: EmailBlock[]
@@ -38,8 +50,22 @@ export interface EmailBuilderState {
     settings?: Partial<EmailSettings>
   }) => void
   setSettings: (patch: Partial<EmailSettings>) => void
-  addBlock: (type: EmailBlockType, index?: number) => void
-  reorder: (activeIndex: number, overIndex: number) => void
+  addBlock: (
+    type: EmailBlockType,
+    index?: number,
+    location?: BlockLocation,
+  ) => void
+  reorder: (
+    activeIndex: number,
+    overIndex: number,
+    location?: BlockLocation,
+  ) => void
+  /** Mueve un bloque existente a otra lista (raíz/otro contenedor/columna). */
+  moveBlock: (
+    id: string,
+    targetLocation: BlockLocation,
+    targetIndex: number,
+  ) => void
   updateBlockProps: (id: string, props: EmailBlockProps) => void
   removeBlock: (id: string) => void
   duplicateBlock: (id: string) => void
@@ -133,29 +159,54 @@ export const createEmailBuilderStore = (
         }))
       },
 
-      addBlock: (type, index) => {
+      addBlock: (type, index, location) => {
+        if (!canNestType(type, location)) return
         const s = get()
         const past = snapshot(s)
         const block = createBlock(type, config.blockLibrary)
-        const blocks = [...s.blocks]
-        const at = index ?? blocks.length
-        blocks.splice(at, 0, block)
-        set({ past, blocks, selectedId: block.id, dirty: true })
+        const next = [...getBlockList(s.blocks, location)]
+        const at = index ?? next.length
+        next.splice(at, 0, block)
+        set({
+          past,
+          blocks: setBlockList(s.blocks, location, next),
+          selectedId: block.id,
+          dirty: true,
+        })
       },
 
-      reorder: (activeIndex, overIndex) => {
+      reorder: (activeIndex, overIndex, location) => {
         if (activeIndex === overIndex) return
         const s = get()
         const past = snapshot(s)
-        const blocks = [...s.blocks]
-        const [moved] = blocks.splice(activeIndex, 1)
-        blocks.splice(overIndex, 0, moved)
-        set({ past, blocks, dirty: true })
+        const list = [...getBlockList(s.blocks, location)]
+        const [moved] = list.splice(activeIndex, 1)
+        if (!moved) return
+        list.splice(overIndex, 0, moved)
+        set({ past, blocks: setBlockList(s.blocks, location, list), dirty: true })
+      },
+
+      moveBlock: (id, targetLocation, targetIndex) => {
+        const s = get()
+        const block = findBlockDeep(s.blocks, id)
+        const source = findBlockLocation(s.blocks, id)
+        if (!block || !source) return
+        if (!canNestType(block.type, targetLocation)) return
+        const past = snapshot(s)
+        const without = removeBlockDeep(s.blocks, id)
+        const target = [...getBlockList(without, targetLocation)]
+        const at = Math.max(0, Math.min(targetIndex, target.length))
+        target.splice(at, 0, block)
+        set({
+          past,
+          blocks: setBlockList(without, targetLocation, target),
+          dirty: true,
+        })
       },
 
       updateBlockProps: (id, props) => {
         const s = get()
-        const prev = s.blocks.find((b) => b.id === id)
+        const prev = findBlockDeep(s.blocks, id)
         let coalesceKey: string | null = id
         if (prev) {
           const changedKey = Object.keys(props).find(
@@ -168,17 +219,15 @@ export const createEmailBuilderStore = (
           coalesceKey = changedKey ? `${id}:${changedKey}` : id
         }
         const past = snapshot(s, coalesceKey)
-        const blocks = s.blocks.map((b) => (b.id === id ? { ...b, props } : b))
-        set({ past, blocks, dirty: true })
+        set({ past, blocks: updateBlockDeep(s.blocks, id, props), dirty: true })
       },
 
       removeBlock: (id) => {
         const s = get()
         const past = snapshot(s)
-        const blocks = s.blocks.filter((b) => b.id !== id)
         set({
           past,
-          blocks,
+          blocks: removeBlockDeep(s.blocks, id),
           selectedId: s.selectedId === id ? null : s.selectedId,
           dirty: true,
         })
@@ -186,18 +235,24 @@ export const createEmailBuilderStore = (
 
       duplicateBlock: (id) => {
         const s = get()
+        const found = findBlockLocation(s.blocks, id)
+        if (!found) return
         const past = snapshot(s)
-        const blocks = [...s.blocks]
-        const index = blocks.findIndex((b) => b.id === id)
-        if (index === -1) return
-        const source = blocks[index]
+        const list = [...getBlockList(s.blocks, found.location)]
+        const source = list[found.index]
+        if (!source) return
         const copy: EmailBlock = {
           id: newId(),
           type: source.type,
           props: JSON.parse(JSON.stringify(source.props)),
         }
-        blocks.splice(index + 1, 0, copy)
-        set({ past, blocks, selectedId: copy.id, dirty: true })
+        list.splice(found.index + 1, 0, copy)
+        set({
+          past,
+          blocks: setBlockList(s.blocks, found.location, list),
+          selectedId: copy.id,
+          dirty: true,
+        })
       },
 
       select: (id) =>

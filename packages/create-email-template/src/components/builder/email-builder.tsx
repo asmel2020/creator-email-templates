@@ -29,6 +29,7 @@ import {
 import { BlockPalette } from "./block-palette"
 import { SortableCanvas } from "./canvas"
 import { PropertiesPanel } from "./properties-panel"
+import { findBlockDeep, type BlockLocation } from "../../store/block-tree"
 
 export interface EmailBuilderProps {
   className?: string
@@ -83,7 +84,7 @@ export const EmailBuilder = ({ className }: EmailBuilderProps) => {
   )
 
   const selectedBlock = useMemo(
-    () => blocks.find((b) => b.id === selectedId) || null,
+    () => (selectedId ? findBlockDeep(blocks, selectedId) : null),
     [blocks, selectedId]
   )
 
@@ -108,8 +109,9 @@ export const EmailBuilder = ({ className }: EmailBuilderProps) => {
     const overData = over.data.current
 
     if (activeData?.source === "palette" && activeData.type) {
-      const index = overData?.index ?? blocks.length
-      addBlock(activeData.type as EmailBlockType, index)
+      const location = overData?.location as BlockLocation | undefined
+      const index = overData?.index as number | undefined
+      addBlock(activeData.type as EmailBlockType, index, location)
     } else if (
       activeData?.source === "canvas" &&
       overData?.source === "canvas"

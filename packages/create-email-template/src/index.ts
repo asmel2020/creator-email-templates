@@ -1,5 +1,8 @@
 import "./index.css";
 
+// Registra vistas built-in (Preview/Editable/fields) antes que la UI.
+import "./register-builtin-views";
+
 // Core (framework-agnostic)
 export * from "./core/types";
 export * from "./core/default-blocks";
@@ -12,6 +15,12 @@ export * from "./core/render";
 // Config
 export * from "./config/types";
 export * from "./config/defaults";
+
+// Block views registry (plugin API)
+export * from "./block-views";
+export * from "./components/builder/field-editors";
+export * from "./footer-presets";
+export * from "./pricing-presets";
 
 // Store (Zustand por instancia + provider)
 export * from "./store/create-email-builder-store";

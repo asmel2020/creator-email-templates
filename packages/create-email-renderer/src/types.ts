@@ -10,15 +10,58 @@ export type EmailBlockType =
   | "image"
   | "quote"
   | "columns"
+  | "container"
+  | "grid"
   | "divider"
   | "spacer"
-  | "footer";
+  | "footer"
+  | "social"
+  | "gallery"
+  | "stats"
+  | "pricing"
+  | "product"
+  | "testimonial"
+  | "features"
+  | "avatar"
+  | "code"
+  | "link";
+
+/**
+ * Profundidad máxima de anidamiento. 1 = un bloque puede contener hijos, pero
+ * esos hijos no pueden volver a contener bloques (sin recursión infinita).
+ */
+export const MAX_BLOCK_DEPTH = 1;
+
+/** Tipos que pueden contener bloques hijos. */
+export const CONTAINER_BLOCK_TYPES: EmailBlockType[] = [
+  "container",
+  "columns",
+  "grid",
+  "footer",
+];
+
+export const isContainerType = (type: string): boolean =>
+  type === "container" ||
+  type === "columns" ||
+  type === "grid" ||
+  type === "footer";
+
 
 export interface BlockCommonProps {
   align?: "left" | "center" | "right";
   backgroundColor?: string;
   paddingY?: number;
   paddingX?: number;
+  /** Overrides por lado; ganan a `paddingY`/`paddingX` cuando están definidos. */
+  paddingTop?: number;
+  paddingRight?: number;
+  paddingBottom?: number;
+  paddingLeft?: number;
+  /** Separación externa del bloque (se aplica a la tabla contenedora). */
+  marginTop?: number;
+  marginBottom?: number;
+  /** Separación interna entre hijos (columnas, elementos de lista). */
+  gap?: number;
 }
 
 export interface HeaderProps extends BlockCommonProps {
@@ -87,7 +130,27 @@ export interface QuoteProps extends BlockCommonProps {
 }
 
 export interface ColumnsProps extends BlockCommonProps {
-  columns: { id: string; text: string }[];
+  columns: ColumnDef[];
+}
+
+/** Columna de `columns` v2 / `grid`: contiene bloques hijos. */
+export interface ColumnDef {
+  id: string;
+  blocks: EmailBlock[];
+  /** Ancho en porcentaje (solo `grid`); `undefined` = reparto equitativo. */
+  width?: number;
+}
+
+/** Bloque contenedor de una sola columna. */
+export interface ContainerProps extends BlockCommonProps {
+  blocks: EmailBlock[];
+}
+
+/** Cuadrícula de una fila con celdas de ancho configurable (ratios). */
+export interface GridProps extends BlockCommonProps {
+  columns: ColumnDef[];
+  /** Identificador del preset de anchos (ej. "1-2", "1-3-2-3"). */
+  layout?: string;
 }
 
 export interface DividerProps extends BlockCommonProps {
@@ -100,10 +163,164 @@ export interface SpacerProps {
   backgroundColor?: string;
 }
 
-export interface FooterProps {
+export interface FooterProps extends BlockCommonProps {
+  /**
+   * "classic" (default) = barra oscura con `text`/`brandName`.
+   * "one-column" / "two-columns" = layouts de columnas (`columns`).
+   */
+  variant?: "classic" | "one-column" | "two-columns";
+  columns?: ColumnDef[];
   text?: string;
   brandName?: string;
   backgroundColor?: string;
+}
+
+export interface SocialLink {
+  id: string;
+  label: string;
+  href: string;
+  /** Glifo (emoji/texto) o URL de imagen, usado en modo "logo". */
+  icon?: string;
+}
+
+export interface SocialProps extends BlockCommonProps {
+  links: SocialLink[];
+  /** "text" muestra el nombre; "logo" muestra el ícono/logo. */
+  mode?: "text" | "logo";
+  /** Tamaño del medallón/logo en modo "logo" (px). Default: 32. */
+  iconSize?: number;
+  color?: string;
+  accentColor?: string;
+}
+
+/** Glifos sugeridos para el modo logo (editables o sustituibles por una URL). */
+export const SOCIAL_ICONS = [
+  "◎",
+  "f",
+  "X",
+  "in",
+  "▶",
+  "♪",
+  "✆",
+  "✉",
+  "@",
+  "★",
+  "●",
+  "◆",
+];
+
+export interface GalleryImage {
+  id: string;
+  src: string;
+  alt?: string;
+  href?: string;
+}
+
+export interface GalleryProps extends BlockCommonProps {
+  images: GalleryImage[];
+  /** Imágenes por fila (2 o 3). */
+  columns?: number;
+}
+
+export interface StatItem {
+  id: string;
+  value: string;
+  label: string;
+}
+
+export interface StatsProps extends BlockCommonProps {
+  stats: StatItem[];
+  accentColor?: string;
+}
+
+export interface PricingPlan {
+  id: string;
+  title: string;
+  price: string;
+  period?: string;
+  description?: string;
+  features: string[];
+  ctaLabel: string;
+  ctaHref: string;
+  /** Tarjeta destacada (fondo oscuro). */
+  highlighted?: boolean;
+}
+
+export interface PricingProps extends BlockCommonProps {
+  /**
+   * "card" (default) = tarjeta única actual; "offer" = tabla de oferta;
+   * "two-tiers" = dos planes con uno destacado.
+   */
+  variant?: "card" | "offer" | "two-tiers";
+  title: string;
+  price: string;
+  period?: string;
+  bullets: string[];
+  ctaLabel: string;
+  ctaHref: string;
+  accentColor?: string;
+  textColor?: string;
+  /** Variante "offer". */
+  eyebrow?: string;
+  description?: string;
+  note?: string;
+  note2?: string;
+  /** Variante "two-tiers". */
+  heading?: string;
+  subtitle?: string;
+  plans?: PricingPlan[];
+  footnote?: string;
+}
+
+export interface ProductProps extends BlockCommonProps {
+  imageUrl?: string;
+  name: string;
+  description?: string;
+  price: string;
+  ctaLabel: string;
+  ctaHref: string;
+}
+
+export interface TestimonialProps extends BlockCommonProps {
+  avatarUrl?: string;
+  quote: string;
+  name: string;
+  role?: string;
+  accentColor?: string;
+}
+
+export interface FeatureItem {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+}
+
+export interface FeaturesProps extends BlockCommonProps {
+  features: FeatureItem[];
+  /** Features por fila (2 o 3). */
+  columns?: number;
+  accentColor?: string;
+}
+
+export interface AvatarProps extends BlockCommonProps {
+  imageUrl?: string;
+  name: string;
+  role?: string;
+  size?: number;
+}
+
+export interface CodeProps extends BlockCommonProps {
+  code: string;
+  language?: string;
+  backgroundColor?: string;
+  color?: string;
+}
+
+export interface LinkProps extends BlockCommonProps {
+  label: string;
+  href: string;
+  color?: string;
 }
 
 export type EmailBlockProps =
@@ -116,9 +333,21 @@ export type EmailBlockProps =
   | ImageProps
   | QuoteProps
   | ColumnsProps
+  | ContainerProps
+  | GridProps
   | DividerProps
   | SpacerProps
-  | FooterProps;
+  | FooterProps
+  | SocialProps
+  | GalleryProps
+  | StatsProps
+  | PricingProps
+  | ProductProps
+  | TestimonialProps
+  | FeaturesProps
+  | AvatarProps
+  | CodeProps
+  | LinkProps;
 
 export interface EmailBlock {
   id: string;
@@ -160,9 +389,21 @@ export const EMAIL_BLOCK_TYPES: EmailBlockType[] = [
   "image",
   "quote",
   "columns",
+  "container",
+  "grid",
   "divider",
   "spacer",
   "footer",
+  "social",
+  "gallery",
+  "stats",
+  "pricing",
+  "product",
+  "testimonial",
+  "features",
+  "avatar",
+  "code",
+  "link",
 ];
 
 export const buildBlockMap = (
