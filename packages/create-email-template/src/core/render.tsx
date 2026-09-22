@@ -38,6 +38,7 @@ export const renderEmailHtml = async ({
       palette={palette}
       pageBackground={settings.pageBackground}
       cardBorderWidth={settings.cardBorderWidth}
+      fontFamily={settings.fontFamily}
       cardBorderRadius={settings.cardBorderRadius}
     />,
   );

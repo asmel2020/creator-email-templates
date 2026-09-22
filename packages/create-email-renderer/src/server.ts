@@ -8,6 +8,7 @@ import type {
   EmailContext,
   EmailPalette,
   EmailSettings,
+  EmailTracking,
 } from "./types.js";
 import { DEFAULT_PALETTE } from "./default-blocks.js";
 
@@ -47,6 +48,8 @@ export interface RenderTemplateEmailOptions {
   context?: EmailContext;
   settings?: Partial<EmailSettings>;
   palette?: EmailPalette;
+  /** Pixel de apertura y tracking de clics (opcional, por envío). */
+  tracking?: EmailTracking;
 }
 
 export interface RenderedTemplateEmail {
@@ -64,6 +67,7 @@ export const renderTemplateEmail = async ({
   context = SAMPLE_CONTEXT,
   settings: overrideSettings,
   palette = DEFAULT_PALETTE,
+  tracking,
 }: RenderTemplateEmailOptions): Promise<RenderedTemplateEmail> => {
   const mergedContext: EmailContext = {
     ...SAMPLE_CONTEXT,
@@ -84,6 +88,7 @@ export const renderTemplateEmail = async ({
     context: mergedContext,
     settings: finalSettings,
     palette,
+    tracking,
   });
 
   const resolvedSubject = resolveVariables(subject, mergedContext);

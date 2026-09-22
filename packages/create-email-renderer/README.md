@@ -39,8 +39,9 @@ await emailClient.send({ to: user.email, subject, html });
 | `subject` | `string` | — (obligatorio) | Asunto del correo. **Resuelve variables**: `"Hola {firstName}"` → `"Hola Danny"`. También queda en `<title>` y en el preview oculto del email. |
 | `payload` | `string \| object \| null` | — | El JSON del editor. Tolera `null`/`undefined`/string inválido (devuelve vacío). |
 | `context` | `EmailContext` | `SAMPLE_CONTEXT` | Valores para las variables `{key}`. Se mezcla sobre `SAMPLE_CONTEXT`, así que los correos de prueba siempre se ven completos aunque falten claves. |
-| `settings` | `Partial<EmailSettings>` | settings del payload | Sobrescribe `{ pageBackground, cardBorderWidth, cardBorderRadius }` guardados. |
+| `settings` | `Partial<EmailSettings>` | settings del payload | Sobrescribe `{ pageBackground, cardBorderWidth, cardBorderRadius, fontFamily }` guardados. |
 | `palette` | `EmailPalette` | `DEFAULT_PALETTE` | Sobrescribe los colores: `{ INK, DARK, GOLD, CREAM_DIM }`. |
+| `tracking` | `EmailTracking` | — | Trackeo **por envío**: pixel de apertura y reescritura de enlaces. Ver [Trackeo](#trackeo-aperturas-y-clics). |
 
 **Comportamiento**: lanza `Template payload has no blocks` si tras normalizar no queda ningún bloque. En cualquier otro caso de datos sucios, normaliza sin quejarse (ver [Normalización](#normalización-de-payloads)).
 
@@ -133,6 +134,62 @@ const { html, subject } = await renderTemplateEmail({
 - **Tolerante**: un tipo desconocido devuelve `null` (y `templateJson` lo descarta).
 - **Anidamiento**: `columns` / `blocks` aceptan `blockJson(...)`, el atajo `[type, props]` o `{ type, props }`; se respeta la profundidad máxima (`MAX_BLOCK_DEPTH`).
 - **Ids**: nunca los administras, se generan con `newId()`.
+
+## Trackeo (aperturas y clics)
+
+Opcional y **por envío** (no se guarda en la plantilla, así que el preview del editor nunca
+lleva pixel). Con `tracking` apagado la salida es idéntica a no usarlo.
+
+```ts
+await renderTemplateEmail({
+  subject: "Tu carrito te espera",
+  payload,
+  context: { email: "ana@ejemplo.com" },
+  tracking: {
+    pixelUrl: "https://track.mi-app.com/o?cid=cart-123&e={email}",   // apertura (1×1)
+    clickUrl: "https://track.mi-app.com/c?cid=cart-123&u={url}",     // clics
+    utm: { source: "email", medium: "email", campaign: "carrito" },
+    exclude: ["/baja"],                                            // extra opcional
+    // transformLink: (href) => `https://mi-redirect/?to=${encodeURIComponent(href)}`,
+  },
+});
+```
+
+| Campo | Qué hace |
+|---|---|
+| `pixelUrl` | Inyecta un `<img width="1" height="1">` antes de `</body>`. Acepta `{variables}`. |
+| `clickUrl` | Reescribe cada `<a href>`: el destino va en `{url}` (codificado) y el tracker recibe las mismas `{variables}`. |
+| `utm` | Añade `utm_*` al destino **antes** de pasarlo por el tracker (respeta los parámetros que ya existían). |
+| `exclude` | Substrings de href que no se reescriben; se suman a los de por defecto (`mailto:`, `tel:`, `sms:`, `#`, `unsubscribe`, `/baja`, `optout`…). |
+| `transformLink` | Control total: devuelve el href final tú mismo. |
+
+**Caveats honestos**
+
+- Las **aperturas** ya no son fiables: Apple Mail precarga las imágenes (MPP) y Gmail las sirve
+  por proxy. Úsalo como tendencia, no como verdad.
+- El **click tracking** cambia la URL visible al pasar el ratón y la vista previa del enlace en
+  algunos clientes; y **nunca** debe pasar por el tracker el enlace de baja.
+- Si tu ESP (Mailflare, Resend, SES…) ya trackea, no lo dupliques: aquí tienes `transformLink`
+  como salida de emergencia.
+
+## Tipografía
+
+El correo lleva un **stack de fuentes de sistema** (lista ordenada: el cliente usa la primera que
+tenga instalada) para no depender de la fuente por defecto del cliente —que en Gmail/Outlook suele
+ser Times New Roman—:
+
+```ts
+await renderTemplateEmail({
+  subject: "Hola",
+  payload,
+  settings: { fontFamily: "Georgia, 'Times New Roman', serif" }, // o "" para no emitir nada
+});
+```
+
+`FONT_STACKS` trae 7 grupos listos (Sistema, Arial/Helvetica, Verdana/Tahoma, Trebuchet MS,
+Georgia, Times New Roman y Monoespaciada) y `DEFAULT_SETTINGS.fontFamily` es el stack de sistema.
+Las **webfonts** (`@font-face`) no son fiables: Gmail las elimina y Outlook escritorio las ignora,
+así que conviene dejar siempre un fallback de sistema al final del stack.
 
 ## Subpaths
 

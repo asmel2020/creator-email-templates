@@ -79,6 +79,7 @@ packages/
         ├── normalize.ts     # normalizeBlocks/normalizeSettings (defensa contra payloads legacy)
         ├── html-render.ts   # renderEmailHtml: JSON → HTML email-safe (tablas + inline styles)
         ├── build.ts         # blockJson(type, props?) / templateJson: constructor tipado de bloques
+        ├── tracking.ts      # applyTracking: pixel de apertura + reescritura de enlaces (opt-in)
         ├── records.ts       # interno: coerción + RECORD_ARRAY_FIELDS (normalize y build)
         ├── server.ts        # parseTemplatePayload (normaliza), renderTemplateEmail, buildTemplateContext
         └── id.ts            # newId = UUID v7-like (timestamp + contador), sin crypto/Math.random (Workers)
@@ -138,6 +139,7 @@ Editor ──getPayload()──▶ { content: EmailBlock[], settings }  ──PU
 | `buildTemplateContext(base, extra?)` | Limpia null/"" y mezcla sobre `SAMPLE_CONTEXT`. |
 | `blockJson(type, props?)` | Constructor **tipado** de un bloque: defaults del esquema vivo + coerción + ids automáticos (bloque y registros) + hijos (`columns`/`blocks` aceptan `[type, props]`, `{type, props}` o un `EmailBlock`). Tipo desconocido → `null`. Subpath `/build`. |
 | `templateJson(blocks, settings?)` | → `{ content, settings }` listo para `renderTemplateEmail({ payload })`; filtra los `null`. |
+| `applyTracking(html, tracking, context)` | Post-proceso del HTML: inyecta el pixel de apertura y reescribe los `<a href>` (respeta exclusiones). Lo llaman `renderEmailHtml`/`renderTemplateEmail` cuando pasas `tracking`. |
 | `resolveVariables(text, ctx)` / `extractVariables` / `validateVariables` | Sintaxis `{key}`. |
 | `renderRichText` / `sanitizeRichText` / `escapeHtml` / `normalizeBlockHtml` / `isRichText` | Pipeline richtext (sanitize-html). |
 | Defaults | `DEFAULT_BLOCK_LIBRARY`, `DEFAULT_PALETTE`, `DEFAULT_SETTINGS`, `DEFAULT_VARIABLES`, `DEFAULT_BASE_VARIABLES`, `DEFAULT_CONTEXTUAL_VARIABLES`, `SAMPLE_CONTEXT`. |
@@ -225,6 +227,12 @@ Todo el CSS del builder vive en `src/index.css` bajo `.ter-theme` con clases `te
 `product` tiene `variant: "card" | "hero" | "image-left" | "grid"` (default `"card"` = la tarjeta de siempre → **sin migración**, byte-idéntica). Son los patrones de react.email/components/ecommerce: `hero` (imagen ancha arriba, `eyebrow` + título 36px + descripción + precio + botón, centrado), `image-left` (tabla 50/50: imagen a la izquierda, ficha a la derecha con botón al 75%) y `grid` (encabezado opcional `heading`/`subheading` + tarjetas de `products[]`, `columns` 2/3/4; con **4** se pinta 2×2 y se inserta un `Hr` entre filas). Estilo: `accentColor` (eyebrow, precio y botón), `radius` (hero 12 · resto 8) e `imageHeight` (hero 320 · grid 180/250; 0 = el default de cada layout). Las recetas viven en `product-presets.ts` (`PRODUCT_VARIANTS`, imágenes data-URI SVG offline) y el panel las expone con el kind `preset` + grupos `visibleWhen` (`Producto` / `Encabezado` / `Tarjetas` / `Cuadrícula` / `Estilo`).
 `checkout` (**bloque 25**, "Resumen de pedido") es el patrón de carrito: `heading` + caja con borde + tabla `Producto / Cantidad / Precio` (`lines: CheckoutLine[]` = `imageUrl/name/quantity/price`) + botón full-width. Props: `imageHeight` (110), `radius` (8), `accentColor` (botón, default `#4f46e5`), `borderColor`. Está en `SPACING_TYPES` (tiene layout) y en `RECORD_ARRAY_FIELDS` vía `lines`.
 **Ojo**: los arrays de registros de estos bloques se llaman `products` y `lines` a propósito — **no** `items`, porque `normalizeProps` tiene una rama especial para `key === "items"` (la de `list`, que coacciona a `string[]`) y `RECORD_ARRAY_FIELDS` se indexa por nombre de prop.
+
+### Tipografía (stack de sistema, opt-out)
+El correo **no** hereda la fuente del editor: `EmailSettings.fontFamily` (default `DEFAULT_FONT_STACK`) se emite inline en el `<body>` y en el `<td>` que envuelve los bloques. `""` = no emitir `font-family` (se hereda la del cliente). El bloque `code` conserva su stack monoespaciado inline (gana por especificidad). `FONT_STACKS` (en `types.ts`, junto a `LIST_ICONS`) trae 7 grupos seguros y el panel Ajustes los expone en un `select` + input libre (Personalizada). **Ojo**: los stacks usan comillas **simples** (`'Segoe UI'`) porque van dentro de un atributo `style="…"`; las dobles romperían el HTML. Las webfonts (`@font-face`) no son fiables (Gmail las elimina, Outlook escritorio las ignora) → dejar siempre fallback de sistema. El canvas y el preview React (`core/blocks.tsx`) aplican la misma familia para no divergir del HTML final.
+
+### Trackeo (aperturas y clics, opt-in por envío)
+`renderEmailHtml` y `renderTemplateEmail` aceptan `tracking?: EmailTracking` (`pixelUrl`, `clickUrl` con `{url}`, `utm`, `exclude`, `transformLink`). Vive **solo en la opción de render**, no en `settings` ni en el payload: el pixel no se guarda en la plantilla ni aparece en el preview del editor. `tracking.ts` es un post-proceso puro sobre el HTML (regex sobre `<a href>`) y con `tracking` apagado la salida es **byte-idéntica** (lo cubre `test/tracking.test.ts` + el snapshot de paridad). `DEFAULT_TRACKING_EXCLUDE` protege la baja y los esquemas no web (`mailto:`, `tel:`, `sms:`, `#`). Caveats: las aperturas no son fiables (Apple MPP, proxy de Gmail) y el wrapping cambia la vista previa del enlace.
 
 ### Dialogs (demo app)
 Patrón de `.agents/skills/manage-dialogs-zustand/SKILL.md`: store zustand por feature con `open: DialogType | null`, dialogs controlados SIN `DialogTrigger`, y un orquestador `components/dialogs.tsx` que monta el dialog activo. `apps/vite-test/src/features/email-builder/` es la referencia (toolbar, preview dialog React-vs-Server, autosave indicator).

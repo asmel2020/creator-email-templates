@@ -505,11 +505,89 @@ export interface BlockDefinition {
   defaultProps: EmailBlockProps;
 }
 
+/** Parámetros UTM añadidos al destino de cada enlace. */
+export interface EmailTrackingUtm {
+  source?: string;
+  medium?: string;
+  campaign?: string;
+  term?: string;
+  content?: string;
+}
+
+/**
+ * Trackeo del envío (opcional y **por envío**, no se guarda en la plantilla):
+ * pixel de apertura y reescritura de enlaces para registrar clics. Se aplica
+ * al final del render, así que sin esto la salida es idéntica.
+ */
+export interface EmailTracking {
+  /** Pixel 1×1 de apertura; se inyecta antes de `</body>`. Acepta `{variables}`. */
+  pixelUrl?: string;
+  /**
+   * URL del tracker de clics. Debe incluir `{url}` (el destino se inserta
+   * codificado) y acepta `{variables}` del contexto.
+   */
+  clickUrl?: string;
+  /** Añade UTM al destino **antes** de pasarlo por el tracker. */
+  utm?: EmailTrackingUtm;
+  /** Substrings extra cuyo href NO se reescribe (se suman a los de por defecto). */
+  exclude?: string[];
+  /** Control total: devuelve el href final (lo que devuelvas se usa tal cual). */
+  transformLink?: (href: string) => string;
+}
+
 export interface EmailSettings {
   pageBackground: string;
   cardBorderWidth: number;
   cardBorderRadius: number;
+  /**
+   * Stack CSS de la tipografía del correo (lista ordenada; el cliente usa la
+   * primera que tenga instalada). `""` = no emitir `font-family` y heredar la
+   * fuente por defecto del cliente.
+   */
+  fontFamily: string;
 }
+
+/** Fuentes seguras (de sistema) para el correo, agrupadas por estilo. */
+export const FONT_STACKS = [
+  {
+    value: "system",
+    label: "Sistema",
+    stack:
+      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+  },
+  {
+    value: "arial",
+    label: "Arial / Helvetica",
+    stack: "Arial, 'Helvetica Neue', Helvetica, sans-serif",
+  },
+  {
+    value: "verdana",
+    label: "Verdana / Tahoma",
+    stack: "Verdana, Tahoma, sans-serif",
+  },
+  {
+    value: "trebuchet",
+    label: "Trebuchet MS",
+    stack: "'Trebuchet MS', Verdana, sans-serif",
+  },
+  {
+    value: "georgia",
+    label: "Georgia (serif)",
+    stack: "Georgia, 'Times New Roman', serif",
+  },
+  {
+    value: "times",
+    label: "Times New Roman (serif)",
+    stack: "'Times New Roman', Times, serif",
+  },
+  {
+    value: "mono",
+    label: "Monoespaciada",
+    stack: "'Courier New', Courier, monospace",
+  },
+] as const;
+
+export const DEFAULT_FONT_STACK = FONT_STACKS[0].stack;
 
 export interface EmailPalette {
   INK: string;

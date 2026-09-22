@@ -210,7 +210,7 @@ describe("checkout block", () => {
         ],
       }),
     );
-    expect(out).toContain('height="90"');
+    expect(out).toContain('width="90" height="90"');
     expect(out).toContain("border-radius:12px");
     expect(out).toContain("background-color:#111827");
   });

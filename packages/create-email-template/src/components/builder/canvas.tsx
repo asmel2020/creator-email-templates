@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { VariablesInfoDialog } from "./variables-info-dialog";
+import { FONT_STACKS } from "../../core/types";
 
 type Device = "mobile" | "desktop";
 
@@ -38,6 +39,7 @@ export const SortableCanvas = ({
   const pageBackground = useEmailBuilderStore((s) => s.settings.pageBackground);
   const cardBorderWidth = useEmailBuilderStore((s) => s.settings.cardBorderWidth);
   const cardBorderRadius = useEmailBuilderStore((s) => s.settings.cardBorderRadius);
+  const fontFamily = useEmailBuilderStore((s) => s.settings.fontFamily);
   const setSettings = useEmailBuilderStore((s) => s.setSettings);
   const [device, setDevice] = useState<Device>("desktop");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -112,6 +114,38 @@ export const SortableCanvas = ({
                     >
                       <X className="ter-h-3.5 ter-w-3.5" />
                     </button>
+                  </div>
+
+                  <div className="ter-grid ter-gap-1">
+                    <label className="ter-text-xs ter-font-semibold ter-text-muted-foreground ter-uppercase">
+                      {config.labels.fontFamily}
+                    </label>
+                    <select
+                      value={
+                        FONT_STACKS.some((f) => f.stack === fontFamily)
+                          ? fontFamily
+                          : "custom"
+                      }
+                      onChange={(e) => {
+                        // "custom" no cambia nada: se edita en el input de abajo.
+                        if (e.target.value === "custom") return;
+                        setSettings({ fontFamily: e.target.value });
+                      }}
+                      className="ter-h-9 ter-w-full ter-rounded-md ter-border ter-border-border ter-bg-transparent ter-px-3 ter-text-sm"
+                    >
+                      {FONT_STACKS.map((f) => (
+                        <option key={f.value} value={f.stack}>
+                          {f.label}
+                        </option>
+                      ))}
+                      <option value="custom">{config.labels.fontCustom}</option>
+                    </select>
+                    <Input
+                      value={fontFamily}
+                      placeholder="font-family: …"
+                      onChange={(e) => setSettings({ fontFamily: e.target.value })}
+                      className="ter-font-mono ter-text-xs"
+                    />
                   </div>
 
                   <div className="ter-grid ter-gap-1">
@@ -218,6 +252,8 @@ export const SortableCanvas = ({
             maxWidth: DEVICE_WIDTH[device],
             border: `${cardBorderWidth}px solid #e3dccb`,
             borderRadius: cardBorderRadius,
+            // Fidelidad con el HTML final: el correo usa su propia tipografía.
+            ...(fontFamily ? { fontFamily } : {}),
           }}
         >
           {blocks.map((block, index) => (

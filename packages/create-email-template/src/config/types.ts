@@ -69,6 +69,8 @@ export interface EmailBuilderLabels {
   pageBackground: string;
   cardBorderWidth: string;
   cardBorderRadius: string;
+  fontFamily: string;
+  fontCustom: string;
   settings: string;
   deviceMobile: string;
   deviceDesktop: string;
@@ -137,6 +139,8 @@ export const DEFAULT_LABELS: EmailBuilderLabels = {
   pageBackground: "Fondo de página",
   cardBorderWidth: "Grosor borde card (px)",
   cardBorderRadius: "Redondeo borde card (px)",
+  fontFamily: "Tipografía",
+  fontCustom: "Personalizada",
   settings: "Ajustes",
   deviceMobile: "Teléfono",
   deviceDesktop: "Laptop / Escritorio",

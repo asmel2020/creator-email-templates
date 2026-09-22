@@ -1,5 +1,6 @@
 import { newId } from "./id.js"
 import { registerBlock } from "./registry.js"
+import { DEFAULT_FONT_STACK } from "./types.js"
 import type { BlockDefinition, EmailPalette, EmailSettings } from "./types.js"
 
 export const DEFAULT_PALETTE: EmailPalette = {
@@ -13,6 +14,7 @@ export const DEFAULT_SETTINGS: EmailSettings = {
   pageBackground: "#f5f1e8",
   cardBorderWidth: 1,
   cardBorderRadius: 4,
+  fontFamily: DEFAULT_FONT_STACK,
 }
 
 export const DEFAULT_BLOCK_LIBRARY: BlockDefinition[] = [

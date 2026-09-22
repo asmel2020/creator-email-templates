@@ -105,13 +105,23 @@ describe("normalizeSettings", () => {
         pageBackground: "#111111",
         cardBorderWidth: "3",
         cardBorderRadius: 10,
+        fontFamily: "Georgia, serif",
         evil: true,
       }),
     ).toEqual({
       pageBackground: "#111111",
       cardBorderWidth: 3,
       cardBorderRadius: 10,
+      fontFamily: "Georgia, serif",
     });
+  });
+
+  it("falls back to the default font stack and keeps the empty opt-out", () => {
+    expect(normalizeSettings({}).fontFamily).toBe(DEFAULT_SETTINGS.fontFamily);
+    expect(normalizeSettings({ fontFamily: "" }).fontFamily).toBe("");
+    expect(normalizeSettings({ fontFamily: 42 as never }).fontFamily).toBe(
+      DEFAULT_SETTINGS.fontFamily,
+    );
   });
 });
 

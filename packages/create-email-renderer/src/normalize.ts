@@ -239,5 +239,10 @@ export const normalizeSettings = (input: unknown): EmailSettings => {
       raw.cardBorderRadius,
       DEFAULT_SETTINGS.cardBorderRadius,
     ),
+    // `""` es válido: desactiva el font-family y deja la fuente del cliente.
+    fontFamily:
+      typeof raw.fontFamily === "string"
+        ? raw.fontFamily
+        : DEFAULT_SETTINGS.fontFamily,
   };
 };

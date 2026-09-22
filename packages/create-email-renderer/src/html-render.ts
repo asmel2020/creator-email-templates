@@ -8,6 +8,7 @@ import {
   DEFAULT_SETTINGS,
 } from "./default-blocks.js";
 import { getBlockRenderHtml, registerBlock } from "./registry.js";
+import { applyTracking } from "./tracking.js";
 import { resolveVariables, SAMPLE_CONTEXT } from "./variables.js";
 import type {
   AvatarProps,
@@ -25,6 +26,7 @@ import type {
   EmailContext,
   EmailPalette,
   EmailSettings,
+  EmailTracking,
   FeaturesProps,
   FooterProps,
   GalleryImage,
@@ -54,6 +56,8 @@ export interface RenderEmailHtmlOptions {
   context?: EmailContext;
   settings?: Partial<EmailSettings>;
   palette?: EmailPalette;
+  /** Pixel de apertura y tracking de clics (opcional, por envío). */
+  tracking?: EmailTracking;
 }
 
 const alignMap = {
@@ -1112,7 +1116,7 @@ const renderCheckout = (
   const rows = (props.lines || [])
     .map((line) => {
       const image = line.imageUrl
-        ? `<img src="${escapeHtml(resolveVariables(line.imageUrl, context))}" alt="${escapeHtml(line.name)}" height="${height}" style="${styleToString({ height, borderRadius: radius, objectFit: "cover", border: 0, display: "block" })}" />`
+        ? `<img src="${escapeHtml(resolveVariables(line.imageUrl, context))}" alt="${escapeHtml(line.name)}" width="${height}" height="${height}" style="${styleToString({ width: height, height, borderRadius: radius, objectFit: "cover", border: 0, display: "block" })}" />`
         : text("(Imagen)", { color: palette.CREAM_DIM, fontSize: 12, margin: 0 });
       const name = `<div style="${styleToString({ color: palette.DARK, fontSize: 14, margin: 0 })}">${renderRichText(resolveVariables(line.name, context))}</div>`;
       const qty = `<div style="${styleToString({ color: palette.DARK, fontSize: 14, margin: 0, textAlign: "center" })}">${escapeHtml(resolveVariables(line.quantity || "1", context))}</div>`;
@@ -1342,6 +1346,7 @@ export const renderEmailHtml = async ({
   context = SAMPLE_CONTEXT,
   settings = {},
   palette = DEFAULT_PALETTE,
+  tracking,
 }: RenderEmailHtmlOptions): Promise<string> => {
   const pageBackground =
     settings.pageBackground ?? DEFAULT_SETTINGS.pageBackground;
@@ -1349,13 +1354,16 @@ export const renderEmailHtml = async ({
     settings.cardBorderWidth ?? DEFAULT_SETTINGS.cardBorderWidth;
   const cardBorderRadius =
     settings.cardBorderRadius ?? DEFAULT_SETTINGS.cardBorderRadius;
+  const fontFamily = settings.fontFamily ?? DEFAULT_SETTINGS.fontFamily;
+  // `""` desactiva la tipografía explícita (se hereda la del cliente).
+  const font = fontFamily ? { fontFamily } : {};
 
   const resolvedSubject = resolveVariables(subject, context);
   const body = blocks
     .map((block) => renderBlock(block, context, palette))
     .join("");
 
-  return `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html dir="ltr" lang="es">
   <head>
     <meta charset="utf-8" />
@@ -1363,11 +1371,12 @@ export const renderEmailHtml = async ({
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>${escapeHtml(resolvedSubject)}</title>
   </head>
-  <body style="${styleToString({ margin: 0, padding: 0, backgroundColor: pageBackground })}">
+  <body style="${styleToString({ margin: 0, padding: 0, backgroundColor: pageBackground, ...font })}">
     <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${escapeHtml(resolvedSubject)}</div>
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" width="100%" style="${styleToString({ maxWidth: 600, width: "100%", backgroundColor: "#ffffff", border: `${cardBorderWidth}px solid #e3dccb`, borderRadius: cardBorderRadius, margin: "0 auto" })}">
-      <tbody><tr><td>${body}</td></tr></tbody>
+      <tbody><tr><td${fontFamily ? ` style="${styleToString(font)}"` : ""}>${body}</td></tr></tbody>
     </table>
   </body>
 </html>`;
+  return applyTracking(html, tracking, context);
 };

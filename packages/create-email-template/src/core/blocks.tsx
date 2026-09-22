@@ -1874,12 +1874,14 @@ export const EmailBody = ({
   palette = DEFAULT_PALETTE,
   cardBorderWidth = 1,
   cardBorderRadius = 4,
+  fontFamily,
 }: {
   blocks: EmailBlock[]
   context: EmailContext
   palette?: EmailPalette
   cardBorderWidth?: number
   cardBorderRadius?: number
+  fontFamily?: string
 }) => (
   <Container
     style={{
@@ -1888,6 +1890,7 @@ export const EmailBody = ({
       border: `${cardBorderWidth}px solid #e3dccb`,
       borderRadius: cardBorderRadius,
       margin: "0 auto",
+      ...(fontFamily ? { fontFamily } : {}),
     }}
   >
     {blocks.map((block) => (
@@ -1909,6 +1912,7 @@ export const EmailTemplate = ({
   pageBackground = "#f5f1e8",
   cardBorderWidth = 1,
   cardBorderRadius = 4,
+  fontFamily,
 }: {
   blocks: EmailBlock[]
   subject: string
@@ -1917,17 +1921,26 @@ export const EmailTemplate = ({
   pageBackground?: string
   cardBorderWidth?: number
   cardBorderRadius?: number
+  fontFamily?: string
 }) => (
   <Html>
     <Head />
     <Preview>{resolveVariables(subject, context)}</Preview>
-    <Body style={{ margin: 0, padding: 0, backgroundColor: pageBackground }}>
+    <Body
+      style={{
+        margin: 0,
+        padding: 0,
+        backgroundColor: pageBackground,
+        ...(fontFamily ? { fontFamily } : {}),
+      }}
+    >
       <EmailBody
         blocks={blocks}
         context={context}
         palette={palette}
         cardBorderWidth={cardBorderWidth}
         cardBorderRadius={cardBorderRadius}
+        fontFamily={fontFamily}
       />
     </Body>
   </Html>
